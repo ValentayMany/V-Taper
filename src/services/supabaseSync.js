@@ -26,21 +26,30 @@ export async function loadFromSupabase() {
       sets: e.default_sets, reps: e.default_reps, rest: e.default_rest,
     })),
     settings: { start: today() },
-    sessions: (sessions || []).map(s => {
-      const sexs = (sessionExercises || []).filter(se => se.session_id === s.id).sort((a, b) => a.position - b.position)
-      return {
-        id: s.id, date: s.session_date, dayName: s.day_name,
-        status: s.status, note: s.note || '', startedAt: null,
-        exercises: sexs.map(se => ({
-          dbId: se.id, exId: null, name: se.name, muscle: se.muscle,
-          targetSets: se.target_sets, targetReps: se.target_reps,
-          rest: se.rest, done: se.done, note: se.note || '',
-          sets: (sets || []).filter(st => st.session_exercise_id === se.id).sort((a, b) => a.set_no - b.set_no).map(st => ({
-            dbId: st.id, reps: st.reps ?? '', kg: st.weight_kg ?? '', rest: st.rest_sec ?? '', rpe: st.rpe ?? '',
+    sessions: (() => {
+      // Deduplicate by session_date (keep the latest/completed)
+      const dateMap = {}
+      ;(sessions || []).forEach(s => {
+        if (!dateMap[s.session_date] || (s.status === 'completed' && dateMap[s.session_date].status !== 'completed')) {
+          dateMap[s.session_date] = s
+        }
+      })
+      return Object.values(dateMap).map(s => {
+        const sexs = (sessionExercises || []).filter(se => se.session_id === s.id).sort((a, b) => a.position - b.position)
+        return {
+          id: s.id, date: s.session_date, dayName: s.day_name,
+          status: s.status, note: s.note || '', startedAt: null,
+          exercises: sexs.map(se => ({
+            dbId: se.id, exId: null, name: se.name, muscle: se.muscle,
+            targetSets: se.target_sets, targetReps: se.target_reps,
+            rest: se.rest, done: se.done, note: se.note || '',
+            sets: (sets || []).filter(st => st.session_exercise_id === se.id).sort((a, b) => a.set_no - b.set_no).map(st => ({
+              dbId: st.id, reps: st.reps ?? '', kg: st.weight_kg ?? '', rest: st.rest_sec ?? '', rpe: st.rpe ?? '',
+            })),
           })),
-        })),
-      }
-    }),
+        }
+      })
+    })(),
     measures: (measurements || []).map(m => ({
       id: m.id, date: m.measured_on, weight: m.weight_kg,
       height: m.height_cm, shoulders: m.shoulders_cm, chest: m.chest_cm, waist: m.waist_cm, pushups: m.pushups, note: m.note || '',
@@ -213,8 +222,10 @@ export async function syncStoreToSupabase(s) {
   }
 
   // 4. Sync workout_sessions, session_exercises, and sets (Upsert active + Delete removed)
-  const { data: remoteSessions } = await supabase.from('workout_sessions').select('id')
+  const { data: remoteSessions } = await supabase.from('workout_sessions').select('id, session_date')
+  const dateToRemoteId = {}
   if (remoteSessions) {
+    remoteSessions.forEach(r => { dateToRemoteId[r.session_date] = r.id })
     const localSessUUIDs = new Set((s.sessions || []).map(sess => sess.id).filter(id => typeof id === 'string' && id.length === 36))
     const toDeleteSessions = remoteSessions.map(r => r.id).filter(id => !localSessUUIDs.has(id))
     if (toDeleteSessions.length > 0) {
@@ -225,7 +236,7 @@ export async function syncStoreToSupabase(s) {
   if (s.sessions && s.sessions.length > 0) {
     for (const sess of s.sessions) {
       const isUUID = typeof sess.id === 'string' && sess.id.length === 36
-      let sessId = isUUID ? sess.id : null
+      let sessId = isUUID ? sess.id : (dateToRemoteId[sess.date] || null)
 
       const sessPayload = {
         session_date: sess.date,
@@ -237,11 +248,13 @@ export async function syncStoreToSupabase(s) {
       if (sessId) {
         sessPayload.id = sessId
         await supabase.from('workout_sessions').upsert(sessPayload)
+        sess.id = sessId
       } else {
         const { data } = await supabase.from('workout_sessions').insert(sessPayload).select().single()
         if (data) {
           sess.id = data.id
           sessId = data.id
+          dateToRemoteId[sess.date] = data.id
         }
       }
 
