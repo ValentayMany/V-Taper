@@ -43,7 +43,7 @@ export async function loadFromSupabase() {
     }),
     measures: (measurements || []).map(m => ({
       id: m.id, date: m.measured_on, weight: m.weight_kg,
-      height: m.height_cm, waist: m.waist_cm, pushups: m.pushups, note: m.note || '',
+      height: m.height_cm, shoulders: m.shoulders_cm, chest: m.chest_cm, waist: m.waist_cm, pushups: m.pushups, note: m.note || '',
     })),
     plan: {
       days: Array.from({ length: 7 }, (_, i) => {
@@ -112,6 +112,8 @@ export async function syncStoreToSupabase(s) {
         measured_on: m.date,
         weight_kg: m.weight ? Number(m.weight) : null,
         height_cm: m.height ? Number(m.height) : null,
+        shoulders_cm: m.shoulders ? Number(m.shoulders) : null,
+        chest_cm: m.chest ? Number(m.chest) : null,
         waist_cm: m.waist ? Number(m.waist) : null,
         pushups: m.pushups ? Number(m.pushups) : null,
         note: m.note || ''
