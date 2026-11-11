@@ -14,7 +14,9 @@ export default function Sidebar() {
   return (
     <aside>
       <div className="brand-wrapper">
-        <div className="brand-icon">💪</div>
+        <div className="brand-icon" style={{ padding: 3, overflow: 'hidden' }}>
+          <img src="/favicon.svg" alt="V-Taper Logo" style={{ width: '100%', height: '100%', borderRadius: 8, display: 'block' }} />
+        </div>
         <div className="brand-info">
           <h2>Lean V-Taper</h2>
           <span className="brand-tag">PRO TRACKER</span>
