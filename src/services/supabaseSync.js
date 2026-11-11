@@ -103,10 +103,18 @@ export async function seedToSupabase() {
 export async function syncStoreToSupabase(s) {
   if (!s) return
 
-  // 1. Sync body_measurements
+  // 1. Sync body_measurements (Upsert active + Delete removed)
+  const { data: remoteMeasures } = await supabase.from('body_measurements').select('id')
+  if (remoteMeasures) {
+    const localMeasureUUIDs = new Set((s.measures || []).map(m => m.id).filter(id => typeof id === 'string' && id.length === 36))
+    const toDeleteMeasures = remoteMeasures.map(r => r.id).filter(id => !localMeasureUUIDs.has(id))
+    if (toDeleteMeasures.length > 0) {
+      await supabase.from('body_measurements').delete().in('id', toDeleteMeasures)
+    }
+  }
+
   if (s.measures && s.measures.length > 0) {
     for (const m of s.measures) {
-      // Upsert measurement if valid uuid, else insert
       const isUUID = typeof m.id === 'string' && m.id.length === 36
       const payload = {
         measured_on: m.date,
@@ -128,7 +136,16 @@ export async function syncStoreToSupabase(s) {
     }
   }
 
-  // 2. Sync exercises
+  // 2. Sync exercises (Upsert active + Delete removed)
+  const { data: remoteExercises } = await supabase.from('exercises').select('id')
+  if (remoteExercises) {
+    const localExUUIDs = new Set((s.exercises || []).map(e => e.id).filter(id => typeof id === 'string' && id.length === 36))
+    const toDeleteExercises = remoteExercises.map(r => r.id).filter(id => !localExUUIDs.has(id))
+    if (toDeleteExercises.length > 0) {
+      await supabase.from('exercises').delete().in('id', toDeleteExercises)
+    }
+  }
+
   if (s.exercises && s.exercises.length > 0) {
     for (const e of s.exercises) {
       const isUUID = typeof e.id === 'string' && e.id.length === 36
@@ -172,10 +189,10 @@ export async function syncStoreToSupabase(s) {
         }
       }
 
-      if (planDayId && day.items) {
+      if (planDayId) {
         // Clear and rewrite planned_exercises for simplicity & position order
         await supabase.from('planned_exercises').delete().eq('plan_day_id', planDayId)
-        if (!day.rest && day.items.length > 0) {
+        if (!day.rest && day.items && day.items.length > 0) {
           const rows = day.items.map((item, idx) => ({
             plan_day_id: planDayId,
             exercise_id: (typeof item.exId === 'string' && item.exId.length === 36) ? item.exId : null,
@@ -195,7 +212,16 @@ export async function syncStoreToSupabase(s) {
     }
   }
 
-  // 4. Sync workout_sessions, session_exercises, and sets
+  // 4. Sync workout_sessions, session_exercises, and sets (Upsert active + Delete removed)
+  const { data: remoteSessions } = await supabase.from('workout_sessions').select('id')
+  if (remoteSessions) {
+    const localSessUUIDs = new Set((s.sessions || []).map(sess => sess.id).filter(id => typeof id === 'string' && id.length === 36))
+    const toDeleteSessions = remoteSessions.map(r => r.id).filter(id => !localSessUUIDs.has(id))
+    if (toDeleteSessions.length > 0) {
+      await supabase.from('workout_sessions').delete().in('id', toDeleteSessions)
+    }
+  }
+
   if (s.sessions && s.sessions.length > 0) {
     for (const sess of s.sessions) {
       const isUUID = typeof sess.id === 'string' && sess.id.length === 36
@@ -220,6 +246,16 @@ export async function syncStoreToSupabase(s) {
       }
 
       if (sessId && sess.exercises) {
+        // Delete removed session exercises that are no longer in this session
+        const { data: remoteSexs } = await supabase.from('session_exercises').select('id').eq('session_id', sessId)
+        if (remoteSexs) {
+          const localSexIds = new Set(sess.exercises.map(e => e.dbId).filter(Boolean))
+          const toDeleteSex = remoteSexs.map(r => r.id).filter(id => !localSexIds.has(id))
+          if (toDeleteSex.length > 0) {
+            await supabase.from('session_exercises').delete().in('id', toDeleteSex)
+          }
+        }
+
         for (let pos = 0; pos < sess.exercises.length; pos++) {
           const ex = sess.exercises[pos]
           let seId = ex.dbId
