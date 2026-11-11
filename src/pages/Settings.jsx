@@ -1,7 +1,7 @@
 import { useStore } from '../hooks/useStore'
 
 export default function Settings() {
-  const { S, toast, reset, importData } = useStore()
+  const { S, toast, reset, importData, syncNow, reload } = useStore()
 
   const handleCopy = () => {
     try {
@@ -43,14 +43,21 @@ export default function Settings() {
       </div>
 
       <div className="card" style={{ borderLeft: '4px solid var(--g)' }}>
-        <div className="sp">
+        <div className="sp" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h3 style={{ margin: '0 0 4px' }}>💾 สถานะการจัดเก็บข้อมูล</h3>
+            <h3 style={{ margin: '0 0 4px' }}>☁️ สถานะการเชื่อมต่อ Supabase Cloud</h3>
             <p className="mut" style={{ margin: 0, fontSize: 13 }}>
-              โหมดออฟไลน์ (Local Storage) — บันทึกในเบราว์เซอร์อัตโนมัติ รวดเร็ว ปลอดภัย และไม่ต้องล็อกอิน
+              บันทึกข้อมูลในเครื่อง (Local Storage) + ออโต้ซิงค์ขึ้น Supabase Cloud อัตโนมัติ
             </p>
           </div>
-          <span className="bd completed">พร้อมใช้งาน</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="b s p" onClick={syncNow}>
+              ☁️ ซิงค์ขึ้น Supabase เดี๋ยวนี้
+            </button>
+            <button className="b s" onClick={reload}>
+              🔄 ดึงข้อมูลจากคลาวด์
+            </button>
+          </div>
         </div>
       </div>
 

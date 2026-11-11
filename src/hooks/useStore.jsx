@@ -98,11 +98,23 @@ export function StoreProvider({ children }) {
     }
   }, [])
 
+  const syncNow = useCallback(async () => {
+    if (!store) return
+    try {
+      await syncStoreToSupabase(store)
+      save(store)
+      toast('ซิงค์ข้อมูลขึ้น Supabase สำเร็จ ✓')
+    } catch (err) {
+      console.error('Manual sync error:', err)
+      toast(`การซิงค์ผิดพลาด: ${err.message || 'โปรดตรวจสอบสิทธิ์ RLS'}`, true)
+    }
+  }, [store, toast])
+
   return (
     <StoreCtx.Provider value={{
       S: store, loading, update, persist: update, toast,
       toasts: toasts.current, removeToast, reset, importData,
-      reload,
+      reload, syncNow,
     }}>
       {children}
     </StoreCtx.Provider>
