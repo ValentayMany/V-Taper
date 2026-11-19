@@ -433,7 +433,7 @@ label {
   color: var(--a);
   border-color: rgba(245, 158, 11, 0.3);
 }
-.rest, .planned-rest {
+.rest, .planned-rest, .swapped_rest {
   background: var(--b-bg);
   color: var(--b);
   border-color: rgba(56, 189, 248, 0.3);

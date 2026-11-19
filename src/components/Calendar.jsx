@@ -5,6 +5,7 @@ const BADGES = {
   completed: { label: 'ฝึกสำเร็จ', icon: '🟢' },
   partial: { label: 'กำลังฝึก', icon: '🟡' },
   rest: { label: 'วันพัก', icon: '🔵' },
+  swapped_rest: { label: 'สลับวันพัก', icon: '🔵' },
   'planned-rest': { label: 'พักตามแผน', icon: '💤' },
   skipped: { label: 'ไม่ได้ฝึก', icon: '🔴' },
   planned: { label: 'ตามตาราง', icon: '⚪' },

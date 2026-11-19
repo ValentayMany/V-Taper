@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../hooks/useStore'
-import { today, dow, wk, add, iso } from '../services/db'
+import { uid, today, dow, wk, add, iso } from '../services/db'
 import Calendar, { Badge } from '../components/Calendar'
 import { SvgLine } from '../components/SvgCharts'
 
 export default function Dashboard() {
-  const { S } = useStore()
+  const { S, update, toast } = useStore()
   const navigate = useNavigate()
   const t = today()
   const [calMonth, setCalMonth] = useState(t.slice(0, 7))
@@ -17,7 +17,13 @@ export default function Dashboard() {
   // Day status
   const dstat = (d) => {
     const s = sess(d)
-    if (s) return s.status === 'in_progress' ? 'partial' : s.status
+    if (s) {
+      if (s.status === 'rest') {
+        const y = S.plan.days[dow(d)]
+        return !y.rest ? 'swapped_rest' : 'rest'
+      }
+      return s.status === 'in_progress' ? 'partial' : s.status
+    }
     const y = S.plan.days[dow(d)]
     if (y.rest) return d <= t ? 'rest' : 'planned-rest'
     return d < t && d >= S.settings.start ? 'skipped' : 'planned'
@@ -30,7 +36,7 @@ export default function Dashboard() {
   const planWorkouts = S.plan.days.filter(x => !x.rest).length || 1
   const trained = statuses.filter(x => x === 'completed' || x === 'partial').length
   const completed = statuses.filter(x => x === 'completed').length
-  const restDays = statuses.filter(x => x === 'rest').length
+  const restDays = statuses.filter(x => x === 'rest' || x === 'swapped_rest').length
   const pc = Math.min(100, Math.round(completed / planWorkouts * 100))
 
   // Last weight
@@ -113,6 +119,61 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Weekly Day-by-Day Status Strip */}
+      <div className="card" style={{ padding: '16px' }}>
+        <div className="sp" style={{ marginBottom: 12 }}>
+          <b style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📅</span> สถานะการฝึกประจำสัปดาห์นี้
+          </b>
+          <span className="mut" style={{ fontSize: 12 }}>คลิกเพื่อดูหรือสลับโปรแกรม</span>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+          gap: 8
+        }}>
+          {weekDates.map((dateStr) => {
+            const st = dstat(dateStr)
+            const isT = dateStr === t
+            const sDay = S.plan.days[dow(dateStr)]
+            const sItem = sess(dateStr)
+            const dayNameShort = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'][dow(dateStr)]
+
+            return (
+              <div
+                key={dateStr}
+                onClick={() => navigate(`/daily/${dateStr}`)}
+                style={{
+                  background: isT ? 'var(--c3)' : 'var(--c2)',
+                  border: isT ? '1px solid var(--g)' : '1px solid var(--ln)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 8px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  position: 'relative'
+                }}
+              >
+                <div style={{ fontSize: 11, color: isT ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
+                  {dayNameShort} ({dateStr.slice(8)})
+                </div>
+                <div style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  margin: '4px 0 6px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {sItem ? sItem.dayName.split(' ')[0] : sDay.name.split(' ')[0]}
+                </div>
+                <Badge status={st} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="card">
         <div className="sp" style={{ marginBottom: 14, borderBottom: '1px solid var(--ln)', paddingBottom: 12 }}>
           <div>
@@ -130,7 +191,31 @@ export default function Dashboard() {
           )}
         </div>
 
-        {todaySess ? (
+        {todaySess && todaySess.status === 'rest' ? (
+          <div style={{ padding: '20px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🛌</div>
+            <b style={{ fontSize: 17, display: 'block', marginBottom: 4, color: 'var(--b)' }}>
+              {todaySess.dayName || 'วันพักผ่อน (สลับเป็นวันพัก)'}
+            </b>
+            <p className="mut" style={{ margin: '0 0 16px', fontSize: 13 }}>
+              {todaySess.note || 'วันนี้คุณเลือกพักผ่อน (สามารถไปออกกำลังกายชดเชยในวันอื่นได้)'}
+            </p>
+            <div className="row" style={{ justifyContent: 'center', gap: 10, margin: 0, flexWrap: 'wrap' }}>
+              <button className="b s" onClick={() => navigate(`/daily/${t}`)}>
+                🔍 ดูรายละเอียด / สลับโปรแกรม
+              </button>
+              <button
+                className="b s"
+                onClick={() => {
+                  update(s => { s.sessions = s.sessions.filter(x => x.date !== t) })
+                  toast('ยกเลิกวันพักแล้ว กลับสู่ตารางปกติ')
+                }}
+              >
+                ↩ ยกเลิกวันพัก
+              </button>
+            </div>
+          </div>
+        ) : todaySess ? (
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
               {todaySess.dayName}
@@ -156,7 +241,10 @@ export default function Dashboard() {
           <div style={{ padding: '16px 0', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🧘‍♂️</div>
             <b style={{ fontSize: 17, display: 'block', marginBottom: 4 }}>{todayPlan.name}</b>
-            <p className="mut" style={{ margin: 0 }}>วันนี้เป็นวันพักผ่อนเพื่อให้กล้ามเนื้อฟื้นฟูอย่างเต็มที่</p>
+            <p className="mut" style={{ margin: '0 0 14px' }}>วันนี้เป็นวันพักผ่อนเพื่อให้กล้ามเนื้อฟื้นฟูอย่างเต็มที่</p>
+            <button className="b s" onClick={() => navigate(`/daily/${t}`)}>
+              🔄 นำโปรแกรมอื่นมาเล่นชดเชยวันนี้
+            </button>
           </div>
         ) : (
           <div>
@@ -171,9 +259,32 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <button className="b p" style={{ width: '100%' }} onClick={() => navigate(`/daily/${t}`)}>
-              🚀 เริ่มการฝึกวันนี้ (Start Workout)
-            </button>
+            <div className="row" style={{ margin: 0, gap: 10, flexWrap: 'wrap' }}>
+              <button className="b p" style={{ flex: 1, minWidth: 180 }} onClick={() => navigate(`/daily/${t}`)}>
+                🚀 เริ่มการฝึกวันนี้ (Start Workout)
+              </button>
+              <button
+                className="b"
+                style={{ background: 'var(--b-bg)', color: 'var(--b)', borderColor: 'rgba(56, 189, 248, 0.3)', whiteSpace: 'nowrap' }}
+                onClick={() => {
+                  update(s => {
+                    s.sessions = s.sessions.filter(x => x.date !== t)
+                    s.sessions.push({
+                      id: uid(),
+                      date: t,
+                      dayName: 'วันพัก (สลับพัก)',
+                      status: 'rest',
+                      note: 'สลับเป็นวันพักผ่อน (จะไปฝึกชดเชยวันอื่น)',
+                      startedAt: Date.now(),
+                      exercises: [],
+                    })
+                  })
+                  toast('บันทึกวันนี้เป็น "วันพัก" เรียบร้อยแล้ว 🛌')
+                }}
+              >
+                🛌 วันนี้ขอพัก (สลับพัก)
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -41,7 +41,12 @@ export default function Daily() {
   const missedYesterday = yesterdayPlan && !yesterdayPlan.rest && (!yesterdaySess || yesterdaySess.status !== 'completed')
 
   const dstat = () => {
-    if (sess) return sess.status === 'in_progress' ? 'partial' : sess.status
+    if (sess) {
+      if (sess.status === 'rest') {
+        return !y.rest ? 'swapped_rest' : 'rest'
+      }
+      return sess.status === 'in_progress' ? 'partial' : sess.status
+    }
     if (y.rest) return d <= today() ? 'rest' : 'planned-rest'
     return d < today() && d >= S.settings.start ? 'skipped' : 'planned'
   }
@@ -56,6 +61,7 @@ export default function Daily() {
       : displayPlan.name
 
     update(s => {
+      s.sessions = s.sessions.filter(x => x.date !== d)
       s.sessions.push({
         id: uid(),
         date: d,
@@ -79,6 +85,29 @@ export default function Daily() {
         }),
       })
     })
+  }
+
+  const markAsRestDay = () => {
+    update(s => {
+      s.sessions = s.sessions.filter(x => x.date !== d)
+      s.sessions.push({
+        id: uid(),
+        date: d,
+        dayName: 'วันพัก (สลับพัก)',
+        status: 'rest',
+        note: 'สลับเป็นวันพักผ่อน (จะไปฝึกชดเชยวันอื่น)',
+        startedAt: Date.now(),
+        exercises: [],
+      })
+    })
+    toast('บันทึกวันนี้เป็น "วันพัก" เรียบร้อยแล้ว 🛌')
+  }
+
+  const unmarkRestDay = () => {
+    update(s => {
+      s.sessions = s.sessions.filter(x => x.date !== d)
+    })
+    toast('ยกเลิกวันพักแล้ว กลับสู่ตารางปกติ')
   }
 
   const loadPlanIntoCurrentSession = (planIndex) => {
@@ -242,7 +271,25 @@ export default function Daily() {
         <Badge status={dstat()} />
       </div>
 
-      {!sess ? (
+      {sess && sess.status === 'rest' ? (
+        <div className="card" style={{ textAlign: 'center', padding: '36px 20px', borderLeft: '4px solid var(--b)' }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🛌</div>
+          <b style={{ fontSize: 20, color: 'var(--b)', display: 'block' }}>
+            {sess.dayName || 'วันพักผ่อน (สลับเป็นวันพัก)'}
+          </b>
+          <p className="mut" style={{ margin: '8px 0 24px', fontSize: 14 }}>
+            {sess.note || 'คุณได้กำหนดให้วันนี้เป็นวันพักผ่อน เพื่อไปออกกำลังกายชดเชยในวันอื่น'}
+          </p>
+          <div className="row" style={{ justifyContent: 'center', gap: 12, margin: 0, flexWrap: 'wrap' }}>
+            <button className="b s" onClick={unmarkRestDay} style={{ padding: '9px 18px', fontSize: 14 }}>
+              ↩ ยกเลิกวันพัก (กลับสู่ตารางปกติ)
+            </button>
+            <button className="b p" onClick={startWorkout} style={{ padding: '9px 18px', fontSize: 14 }}>
+              ⚡ เปลี่ยนใจ อยากเริ่มฝึกวันนี้
+            </button>
+          </div>
+        </div>
+      ) : !sess ? (
         <div className="card">
           {/* Suggestion banner if yesterday was missed & today is rest day */}
           {y.rest && missedYesterday && (
@@ -350,12 +397,30 @@ export default function Daily() {
               ))}
             </div>
           )}
-          <div className="row">
-            <button className="b p" style={{ width: '100%', padding: '12px', fontSize: 15 }} onClick={startWorkout}>
+          <div className="row" style={{ marginTop: 16, gap: 10, flexWrap: 'wrap' }}>
+            <button className="b p" style={{ flex: 1, minWidth: 200, padding: '12px', fontSize: 15 }} onClick={startWorkout}>
               {isSubstituted
                 ? `⚡ เริ่มการฝึกชดเชย: ${displayPlan.name}`
                 : (displayPlan.rest ? '⚡ เริ่มการฝึกนอกตาราง (ไม่มีท่าตั้งต้น)' : `🚀 เริ่มการฝึก: ${displayPlan.name}`)}
             </button>
+            {!displayPlan.rest && (
+              <button
+                className="b"
+                style={{
+                  background: 'var(--b-bg)',
+                  color: 'var(--b)',
+                  borderColor: 'rgba(56, 189, 248, 0.3)',
+                  padding: '12px 18px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={markAsRestDay}
+                title="สลับวันนี้เป็นวันพักผ่อน เพื่อไปฝึกชดเชยวันอื่น"
+              >
+                🛌 วันนี้ขอพัก (สลับวันพัก)
+              </button>
+            )}
           </div>
         </div>
       ) : (
