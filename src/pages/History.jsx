@@ -6,7 +6,7 @@ import { Badge } from '../components/Calendar'
 const MU = ['Chest', 'Shoulders', 'Back', 'Biceps', 'Triceps', 'Legs', 'Glutes', 'Calves', 'Core']
 
 export default function History() {
-  const { S } = useStore()
+  const { S, toast } = useStore()
   const navigate = useNavigate()
   const [filterDate, setFilterDate] = useState('')
   const [filterMuscle, setFilterMuscle] = useState('')
@@ -16,6 +16,125 @@ export default function History() {
     .filter(s => (!filterDate || s.date === filterDate) && (!filterMuscle || s.exercises.some(e => e.muscle === filterMuscle)))
 
   const clearFilters = () => { setFilterDate(''); setFilterMuscle('') }
+
+  const handleExportExcel = () => {
+    if (!sessions || sessions.length === 0) {
+      toast('ยังไม่มีประวัติการฝึกสำหรับส่งออก', true)
+      return
+    }
+
+    const headers = [
+      'วันที่ (Date)',
+      'โปรแกรม (Program)',
+      'สถานะ (Status)',
+      'ท่าออกกำลังกาย (Exercise)',
+      'กลุ่มกล้ามเนื้อ (Muscle)',
+      'เซ็ตที่ (Set)',
+      'จำนวนครั้ง (Reps)',
+      'น้ำหนัก (kg)',
+      'พัก (วินาที)',
+      'ระดับความเหนื่อย (RPE 1-10)',
+      'โน้ตท่าฝึก',
+      'โน้ตประจำวัน',
+    ]
+
+    const statusMap = {
+      completed: 'ฝึกสำเร็จ',
+      in_progress: 'กำลังฝึก',
+      partial: 'กำลังฝึก',
+      rest: 'วันพัก',
+      skipped: 'ไม่ได้ฝึก',
+    }
+
+    const rows = [headers]
+
+    sessions.forEach(s => {
+      const dateStr = s.date || ''
+      const dayName = s.dayName || ''
+      const statusStr = statusMap[s.status] || s.status || ''
+      const sessionNote = s.note || ''
+
+      const filteredExercises = (s.exercises || []).filter(
+        e => !filterMuscle || e.muscle === filterMuscle
+      )
+
+      if (!filteredExercises || filteredExercises.length === 0) {
+        rows.push([
+          dateStr,
+          dayName,
+          statusStr,
+          '-',
+          '-',
+          '-',
+          '-',
+          '-',
+          '-',
+          '-',
+          '-',
+          sessionNote,
+        ])
+        return
+      }
+
+      filteredExercises.forEach(e => {
+        const exName = e.name || ''
+        const muscle = e.muscle || ''
+        const exNote = e.note || ''
+        const validSets = (e.sets || []).filter(st => st.reps !== '' && st.reps != null && +st.reps > 0)
+
+        if (validSets.length === 0) {
+          rows.push([
+            dateStr,
+            dayName,
+            statusStr,
+            exName,
+            muscle,
+            '1',
+            '-',
+            '-',
+            e.rest || '-',
+            '-',
+            exNote,
+            sessionNote,
+          ])
+        } else {
+          validSets.forEach((st, idx) => {
+            rows.push([
+              dateStr,
+              dayName,
+              statusStr,
+              exName,
+              muscle,
+              idx + 1,
+              st.reps ?? '-',
+              st.kg !== '' && st.kg != null ? st.kg : '0',
+              st.rest || e.rest || '-',
+              st.rpe || '-',
+              exNote,
+              sessionNote,
+            ])
+          })
+        }
+      })
+    })
+
+    const csvContent = '\uFEFF' + rows.map(r => r.map(c => {
+      const str = String(c == null ? '' : c).replace(/"/g, '""')
+      return `"${str}"`
+    }).join(',')).join('\r\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `vtaper-workout-history-${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast('ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว ✓')
+  }
 
   return (
     <>
@@ -27,20 +146,31 @@ export default function History() {
       </div>
 
       <div className="card" style={{ padding: 14 }}>
-        <div className="row" style={{ margin: 0, gap: 10 }}>
-          <input
-            type="date"
-            value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
-            style={{ fontWeight: 500 }}
-          />
-          <select value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
-            <option value="">ทุกกลุ่มกล้ามเนื้อ</option>
-            {MU.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-          {(filterDate || filterMuscle) && (
-            <button className="b s" onClick={clearFilters}>✕ ล้างตัวกรอง</button>
-          )}
+        <div className="sp" style={{ flexWrap: 'wrap', gap: 10 }}>
+          <div className="row" style={{ margin: 0, gap: 10 }}>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              style={{ fontWeight: 500 }}
+            />
+            <select value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
+              <option value="">ทุกกลุ่มกล้ามเนื้อ</option>
+              {MU.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            {(filterDate || filterMuscle) && (
+              <button className="b s" onClick={clearFilters}>✕ ล้างตัวกรอง</button>
+            )}
+          </div>
+
+          <button
+            className="b s p"
+            onClick={handleExportExcel}
+            title="ดาวน์โหลดประวัติการฝึกเป็นไฟล์ Excel (.csv)"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            📊 บันทึกเป็นไฟล์ Excel
+          </button>
         </div>
       </div>
 
