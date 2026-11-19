@@ -125,6 +125,16 @@ export default function Daily() {
   const [selectedPlanIdx, setSelectedPlanIdx] = useState(dow(d))
   const [wakeLockActive, setWakeLockActive] = useState(false)
 
+  const exById = (id) => S.exercises.find(e => e.id === id)
+  const sess = S.sessions.find(s => s.date === d)
+  const y = S.plan.days[dow(d)]
+
+  const targetPlanIndex = (selectedPlanIdx !== null && selectedPlanIdx >= 0 && selectedPlanIdx < 7)
+    ? selectedPlanIdx
+    : dow(d)
+  const displayPlan = S.plan.days[targetPlanIndex] || y
+  const isSubstituted = targetPlanIndex !== dow(d)
+
   useEffect(() => {
     setSelectedPlanIdx(dow(d))
   }, [d])
@@ -161,8 +171,6 @@ export default function Daily() {
     }
   }, [sess?.status])
 
-  const exById = (id) => S.exercises.find(e => e.id === id)
-
   const getPrevExerciseRecord = (exId, exName) => {
     const pastSessions = S.sessions
       .filter(s => s.date < d && s.status !== 'rest')
@@ -194,14 +202,6 @@ export default function Daily() {
     }
     return null
   }
-  const sess = S.sessions.find(s => s.date === d)
-  const y = S.plan.days[dow(d)]
-
-  const targetPlanIndex = (selectedPlanIdx !== null && selectedPlanIdx >= 0 && selectedPlanIdx < 7)
-    ? selectedPlanIdx
-    : dow(d)
-  const displayPlan = S.plan.days[targetPlanIndex] || y
-  const isSubstituted = targetPlanIndex !== dow(d)
 
   // Check if yesterday was a planned workout day that wasn't completed
   const yesterdayDate = add(d, -1)
