@@ -39,6 +39,20 @@ export default function Dashboard() {
   const restDays = statuses.filter(x => x === 'rest' || x === 'swapped_rest').length
   const pc = Math.min(100, Math.round(completed / planWorkouts * 100))
 
+  // Weekly total reps (Home Workout Overload)
+  const weekSessions = weekDates.map(sess).filter(Boolean)
+  const totalRepsThisWeek = weekSessions.reduce((acc, s) => {
+    return acc + (s.exercises || []).reduce((a, e) => {
+      return a + (e.sets || []).reduce((b, st) => b + (+st.reps || 0), 0)
+    }, 0)
+  }, 0)
+
+  const pushupsCountThisWeek = weekSessions.reduce((acc, s) => {
+    return acc + (s.exercises || [])
+      .filter(e => e.name?.toLowerCase().includes('push-up'))
+      .reduce((a, e) => a + (e.sets || []).reduce((b, st) => b + (+st.reps || 0), 0), 0)
+  }, 0)
+
   // Last weight
   const lw = [...S.measures].filter(m => m.weight).sort((a, b) => a.date < b.date ? -1 : 1)
   const last = lw[lw.length - 1]
@@ -105,6 +119,31 @@ export default function Dashboard() {
           <b>{last ? last.weight + ' kg' : '—'}</b>
         </div>
       </div>
+
+      {totalRepsThisWeek > 0 && (
+        <div className="card" style={{
+          background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(16, 185, 129, 0.12))',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          padding: '12px 18px',
+          marginBottom: 16
+        }}>
+          <div className="sp" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 28 }}>💪</span>
+              <div>
+                <b style={{ fontSize: 15, color: 'var(--tx)' }}>สถิติสะสมสัปดาห์นี้ (Home Overload):</b>
+                <div className="mut" style={{ fontSize: 13, marginTop: 2 }}>
+                  ยกไปแล้วรวม <b style={{ color: 'var(--g-bright)' }}>{totalRepsThisWeek}</b> ครั้ง
+                  {pushupsCountThisWeek > 0 && <span> (วิดพื้น {pushupsCountThisWeek} ครั้ง)</span>}
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: 12, background: 'var(--g-bg)', color: 'var(--g-bright)', padding: '4px 10px', borderRadius: 99, fontWeight: 700 }}>
+              🔥 กล้ามเนื้อพัฒนาต่อเนื่อง
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="sp">

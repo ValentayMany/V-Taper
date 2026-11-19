@@ -123,10 +123,43 @@ export default function Daily() {
   const [selectedExId, setSelectedExId] = useState('')
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(null)
   const [selectedPlanIdx, setSelectedPlanIdx] = useState(dow(d))
+  const [wakeLockActive, setWakeLockActive] = useState(false)
 
   useEffect(() => {
     setSelectedPlanIdx(dow(d))
   }, [d])
+
+  // Screen Wake Lock during workout so screen doesn't turn off
+  useEffect(() => {
+    let sentinel = null
+    let isMounted = true
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          sentinel = await navigator.wakeLock.request('screen')
+          if (isMounted) setWakeLockActive(true)
+          sentinel.addEventListener('release', () => {
+            if (isMounted) setWakeLockActive(false)
+          })
+        }
+      } catch (e) {
+        console.log('Wake Lock info:', e)
+      }
+    }
+
+    if (sess && sess.status === 'in_progress') {
+      requestWakeLock()
+    } else {
+      if (sentinel) sentinel.release().catch(() => {})
+      setWakeLockActive(false)
+    }
+
+    return () => {
+      isMounted = false
+      if (sentinel) sentinel.release().catch(() => {})
+    }
+  }, [sess?.status])
 
   const exById = (id) => S.exercises.find(e => e.id === id)
 
@@ -601,7 +634,24 @@ export default function Daily() {
 
           <div className="card" style={{ padding: '10px 14px', background: 'var(--c2)' }}>
             <div className="sp" style={{ flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>⏱️ จับเวลาพักด่วน:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>⏱️ จับเวลาพักด่วน:</span>
+                {wakeLockActive && (
+                  <span style={{
+                    fontSize: 11,
+                    color: 'var(--g-bright)',
+                    background: 'var(--g-bg)',
+                    padding: '2px 8px',
+                    borderRadius: 99,
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    <span>📱</span> จอเปิดค้างไว้
+                  </span>
+                )}
+              </div>
               <div className="row" style={{ margin: 0, gap: 6 }}>
                 {[30, 45, 60, 90, 120].map(sec => (
                   <button key={sec} className="b s" onClick={() => setActiveTimerSeconds(sec)}>
@@ -741,10 +791,28 @@ export default function Daily() {
                                   }
                                   onChange={ev => handleSetField(i, j, f, ev.target.value)}
                                 />
-                                {f === 'reps' && prevSet && (
-                                  <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
-                                    เดิม: {prevSet.reps}
-                                  </div>
+                                {f === 'reps' && (
+                                  <>
+                                    {prevRecord && set.reps && +set.reps > prevRecord.bestReps ? (
+                                      <div style={{
+                                        fontSize: 10,
+                                        color: '#fbbf24',
+                                        fontWeight: 800,
+                                        marginTop: 2,
+                                        textAlign: 'center',
+                                        background: 'rgba(245, 158, 11, 0.18)',
+                                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                                        borderRadius: 4,
+                                        padding: '1px 3px'
+                                      }}>
+                                        🏆 PR! (+{+set.reps - prevRecord.bestReps})
+                                      </div>
+                                    ) : prevSet ? (
+                                      <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
+                                        เดิม: {prevSet.reps}
+                                      </div>
+                                    ) : null}
+                                  </>
                                 )}
                               </td>
                             ))}
