@@ -4,6 +4,8 @@ export function seed() {
   const L = [
     ['Push-up Board (Green Position)', 'Chest', 'Push-up Board', 3, 10, 90],
     ['Dumbbell Floor Press', 'Chest', 'Dumbbell', 3, 12, 90],
+    ['Incline Dumbbell Press', 'Chest', 'Dumbbell', 3, 12, 90],
+    ['Dumbbell Lateral Raise', 'Shoulders', 'Dumbbell', 3, 15, 60],
     ['One-arm Dumbbell Row', 'Back', 'Dumbbell', 3, 12, 75],
     ['Dumbbell Shoulder Press', 'Shoulders', 'Dumbbell', 3, 10, 90],
     ['Biceps Curl', 'Biceps', 'Dumbbell', 3, 12, 60],

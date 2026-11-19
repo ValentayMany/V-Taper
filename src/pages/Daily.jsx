@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useStore } from '../hooks/useStore'
 import { uid, today, dow, add, P } from '../services/db'
@@ -17,10 +17,28 @@ export default function Daily() {
 
   const [selectedExId, setSelectedExId] = useState('')
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(null)
+  const [selectedPlanIdx, setSelectedPlanIdx] = useState(dow(d))
+
+  useEffect(() => {
+    setSelectedPlanIdx(dow(d))
+  }, [d])
 
   const exById = (id) => S.exercises.find(e => e.id === id)
   const sess = S.sessions.find(s => s.date === d)
   const y = S.plan.days[dow(d)]
+
+  const targetPlanIndex = (selectedPlanIdx !== null && selectedPlanIdx >= 0 && selectedPlanIdx < 7)
+    ? selectedPlanIdx
+    : dow(d)
+  const displayPlan = S.plan.days[targetPlanIndex] || y
+  const isSubstituted = targetPlanIndex !== dow(d)
+
+  // Check if yesterday was a planned workout day that wasn't completed
+  const yesterdayDate = add(d, -1)
+  const yesterdayDow = dow(yesterdayDate)
+  const yesterdayPlan = S.plan.days[yesterdayDow]
+  const yesterdaySess = S.sessions.find(s => s.date === yesterdayDate)
+  const missedYesterday = yesterdayPlan && !yesterdayPlan.rest && (!yesterdaySess || yesterdaySess.status !== 'completed')
 
   const dstat = () => {
     if (sess) return sess.status === 'in_progress' ? 'partial' : sess.status
@@ -33,21 +51,60 @@ export default function Daily() {
   const goDate = (n) => navigate(`/daily/${add(d, n)}`)
 
   const startWorkout = () => {
+    const sessionDayName = isSubstituted
+      ? `${displayPlan.name} (ชดเชย)`
+      : displayPlan.name
+
     update(s => {
       s.sessions.push({
-        id: uid(), date: d, dayName: y.name, status: 'in_progress',
-        note: '', startedAt: Date.now(),
-        exercises: y.rest ? [] : y.items.map(item => {
+        id: uid(),
+        date: d,
+        dayName: sessionDayName,
+        status: 'in_progress',
+        note: isSubstituted ? `ฝึกชดเชยโปรแกรม ${displayPlan.name} (${DN[targetPlanIndex].split(' ')[0]})` : '',
+        startedAt: Date.now(),
+        exercises: displayPlan.rest ? [] : displayPlan.items.map(item => {
           const e = exById(item.exId) || { name: '?', muscle: '-' }
           return {
-            exId: item.exId, name: e.name, muscle: e.muscle,
-            targetSets: item.sets, targetReps: item.reps, rest: item.rest,
-            done: false, note: '',
+            exId: item.exId,
+            name: e.name,
+            muscle: e.muscle,
+            targetSets: item.sets,
+            targetReps: item.reps,
+            rest: item.rest,
+            done: false,
+            note: '',
             sets: [{ reps: '', kg: '', rest: item.rest, rpe: '' }],
           }
         }),
       })
     })
+  }
+
+  const loadPlanIntoCurrentSession = (planIndex) => {
+    const target = S.plan.days[planIndex]
+    if (!target || target.rest) return
+    update(s => {
+      const cur = s.sessions.find(x => x.date === d)
+      if (!cur) return
+      cur.dayName = `${target.name} (ชดเชย)`
+      cur.note = cur.note ? `${cur.note} | ดึงท่าจาก ${target.name}` : `ดึงท่าจากโปรแกรม ${target.name}`
+      cur.exercises = target.items.map(item => {
+        const e = exById(item.exId) || { name: '?', muscle: '-' }
+        return {
+          exId: item.exId,
+          name: e.name,
+          muscle: e.muscle,
+          targetSets: item.sets,
+          targetReps: item.reps,
+          rest: item.rest,
+          done: false,
+          note: '',
+          sets: [{ reps: '', kg: '', rest: item.rest, rpe: '' }],
+        }
+      })
+    })
+    toast(`ดึงท่าจากโปรแกรม ${target.name} เรียบร้อยแล้ว`)
   }
 
   const handleSetField = (i, j, field, val) => {
@@ -187,16 +244,98 @@ export default function Daily() {
 
       {!sess ? (
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>📋 รายการท่าตามโปรแกรม</h3>
-          {y.rest ? (
+          {/* Suggestion banner if yesterday was missed & today is rest day */}
+          {y.rest && missedYesterday && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 78, 59, 0.25))',
+              border: '1px solid var(--g)',
+              padding: '14px 16px',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12
+            }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>💡</span> เล่นชดเชย: เมื่อวาน ({DN[yesterdayDow].split(' ')[0]}) คุณยังไม่ได้ฝึก
+                </div>
+                <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>
+                  วันนี้เป็นวันพักตามแผน ต้องการนำโปรแกรม <b>"{yesterdayPlan.name}"</b> มาฝึกทดแทนวันนี้ไหม?
+                </div>
+              </div>
+              <button
+                className="b p"
+                style={{ fontSize: 13, padding: '8px 14px' }}
+                onClick={() => setSelectedPlanIdx(yesterdayDow)}
+              >
+                ⚡ ดึงโปรแกรม {yesterdayPlan.name} มาเล่นวันนี้
+              </button>
+            </div>
+          )}
+
+          {/* Program Selector */}
+          <div style={{
+            background: 'var(--c2)',
+            padding: '12px 14px',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--ln)',
+            marginBottom: 16
+          }}>
+            <div className="sp" style={{ marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🔄</span> {y.rest ? 'วันนี้เป็นวันพัก — เลือกโปรแกรมมาฝึกทดแทน:' : 'เลือกโปรแกรมที่จะฝึกวันนี้:'}
+              </label>
+              {isSubstituted && (
+                <button
+                  className="b s"
+                  style={{ fontSize: 11, padding: '3px 8px' }}
+                  onClick={() => setSelectedPlanIdx(dow(d))}
+                >
+                  ↺ กลับไปตามตาราง ({DN[dow(d)].split(' ')[0]})
+                </button>
+              )}
+            </div>
+
+            <select
+              value={targetPlanIndex}
+              onChange={e => setSelectedPlanIdx(Number(e.target.value))}
+              style={{ width: '100%', fontWeight: 600, padding: '8px 12px' }}
+            >
+              <option value={dow(d)}>
+                ⭐ โปรแกรมตามตารางประจำวัน ({DN[dow(d)].split(' ')[0]}: {y.name}{y.rest ? ' - วันพัก' : ''})
+              </option>
+              <optgroup label="🔁 สลับนำโปรแกรมของวันอื่นมาเล่นชดเชย:">
+                {S.plan.days.map((p, idx) => {
+                  if (idx === dow(d)) return null
+                  return (
+                    <option key={idx} value={idx}>
+                      {DN[idx].split(' ')[0]} — {p.name} {p.rest ? '(วันพัก)' : `(${p.items?.length || 0} ท่า)`}
+                    </option>
+                  )
+                })}
+              </optgroup>
+            </select>
+          </div>
+
+          <h3 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>📋</span> รายการท่าที่จะฝึก ({displayPlan.name})
+            {isSubstituted && <span className="bd" style={{ background: 'var(--g)', color: '#fff', fontSize: 11 }}>เล่นชดเชย</span>}
+          </h3>
+
+          {displayPlan.rest ? (
             <div style={{ padding: '24px 0', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>🛌</div>
-              <b style={{ fontSize: 16 }}>วันพักตามแผน</b>
-              <p className="mut" style={{ margin: '4px 0 0' }}>ไม่มีโปรแกรมการฝึกที่ต้องทำในวันนี้</p>
+              <b style={{ fontSize: 16 }}>{displayPlan.name}</b>
+              <p className="mut" style={{ margin: '6px 0 0', fontSize: 13 }}>
+                ไม่มีโปรแกรมการฝึกที่ต้องทำในวันนี้ — หากต้องการฝึกทดแทน สามารถเลือกโปรแกรมของวันอื่นจากเมนูด้านบนได้เลย
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-              {y.items.map((item, i) => (
+              {displayPlan.items.map((item, i) => (
                 <div key={i} className="ex-row">
                   <div>
                     <span style={{ fontWeight: 600 }}>{exById(item.exId)?.name || '?'}</span>
@@ -212,13 +351,41 @@ export default function Daily() {
             </div>
           )}
           <div className="row">
-            <button className="b p" style={{ width: '100%', padding: '12px' }} onClick={startWorkout}>
-              {y.rest ? '⚡ เริ่มการฝึกนอกตาราง' : '🚀 เริ่มการฝึกวันนี้ (Start Workout)'}
+            <button className="b p" style={{ width: '100%', padding: '12px', fontSize: 15 }} onClick={startWorkout}>
+              {isSubstituted
+                ? `⚡ เริ่มการฝึกชดเชย: ${displayPlan.name}`
+                : (displayPlan.rest ? '⚡ เริ่มการฝึกนอกตาราง (ไม่มีท่าตั้งต้น)' : `🚀 เริ่มการฝึก: ${displayPlan.name}`)}
             </button>
           </div>
         </div>
       ) : (
         <>
+          {sess.exercises.length === 0 && (
+            <div className="card" style={{ textAlign: 'center', padding: '28px 16px', background: 'var(--c2)', border: '1px dashed var(--g2)' }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+              <b style={{ fontSize: 16 }}>ยังไม่มีท่าฝึกในเซสชันนี้</b>
+              <p className="mut" style={{ fontSize: 13, margin: '6px 0 16px' }}>
+                วันนี้เริ่มการฝึกจากวันพัก คุณสามารถเลือกดึงท่าฝึกจากโปรแกรมประจำวันเข้ามาฝึกได้ทันที:
+              </p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 450, margin: '0 auto' }}>
+                <select id="importEmptyPlan" style={{ flex: 1, minWidth: 200, padding: '8px 12px' }}>
+                  {S.plan.days.map((p, idx) => !p.rest && (
+                    <option key={idx} value={idx}>{DN[idx].split(' ')[0]} — {p.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="b p"
+                  onClick={() => {
+                    const sel = document.getElementById('importEmptyPlan')
+                    if (sel) loadPlanIntoCurrentSession(Number(sel.value))
+                  }}
+                >
+                  📥 ดึงท่าฝึกทันที
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="card" style={{ padding: '10px 14px', background: 'var(--c2)' }}>
             <div className="sp" style={{ flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>⏱️ จับเวลาพักด่วน:</span>

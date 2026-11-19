@@ -46,6 +46,175 @@ export default function Schedule() {
     }, true)
   }
 
+  const applyVTaperFocusPlan = () => {
+    if (!confirm('ยืนยันตั้งค่าตารางเป็น "เน้น ไหล่ - อก - แขน (V-Taper Focus)"?\n(ประวัติการฝึกเดิมของคุณจะไม่หาย)')) return
+
+    update(s => {
+      // 1. Ensure required exercises exist
+      const neededEx = [
+        { name: 'Dumbbell Lateral Raise', muscle: 'Shoulders', equip: 'Dumbbell', sets: 4, reps: 15, rest: 60 },
+        { name: 'Incline Dumbbell Press', muscle: 'Chest', equip: 'Dumbbell', sets: 3, reps: 12, rest: 90 },
+      ]
+      neededEx.forEach(nex => {
+        if (!s.exercises.some(e => e.name.toLowerCase() === nex.name.toLowerCase())) {
+          s.exercises.push({ id: uid(), ...nex })
+        }
+      })
+
+      const getExId = (name) => {
+        const found = s.exercises.find(e => e.name.toLowerCase() === name.toLowerCase())
+        return found ? found.id : null
+      }
+
+      const makeItem = (name, sets, reps, rest) => {
+        const eId = getExId(name)
+        if (!eId) return null
+        return { id: uid(), exId: eId, sets: sets || 3, reps: reps || 12, rest: rest || 60 }
+      }
+
+      const cleanItems = (list) => list.map(item => makeItem(...item)).filter(Boolean)
+
+      s.plan.days = [
+        // Day 0: Monday
+        {
+          name: 'Upper A (อกเน้นๆ + หลังแขน + ไหล่ข้าง)',
+          rest: false,
+          items: cleanItems([
+            ['Push-up Board (Green Position)', 3, 10, 90],
+            ['Dumbbell Floor Press', 3, 12, 90],
+            ['Dumbbell Pullover', 3, 12, 75],
+            ['Dumbbell Lateral Raise', 3, 15, 60],
+            ['Overhead Triceps Extension', 3, 12, 60],
+            ['Close-grip Push-up', 3, 10, 75],
+          ])
+        },
+        // Day 1: Tuesday
+        {
+          name: 'Upper B (ไหล่กว้าง + หน้าแขน + ปีกหลัง)',
+          rest: false,
+          items: cleanItems([
+            ['Dumbbell Shoulder Press', 3, 10, 90],
+            ['Dumbbell Lateral Raise', 4, 15, 60],
+            ['One-arm Dumbbell Row', 3, 12, 75],
+            ['Biceps Curl', 3, 12, 60],
+            ['Hammer Curl', 3, 12, 60],
+            ['Prone Y-T Raise', 3, 10, 60],
+          ])
+        },
+        // Day 2: Wednesday
+        {
+          name: 'Rest Day (วันพักฟื้นฟู)',
+          rest: true,
+          items: []
+        },
+        // Day 3: Thursday
+        {
+          name: 'Upper C (อก + ไหล่ 3 มิติ + แขน Super Pump)',
+          rest: false,
+          items: cleanItems([
+            ['Dumbbell Floor Press', 3, 12, 90],
+            ['Push-up Board (Green Position)', 3, 10, 75],
+            ['Dumbbell Lateral Raise', 4, 15, 60],
+            ['Bent-over Dumbbell Row', 3, 12, 75],
+            ['Biceps Curl', 3, 12, 60],
+            ['Overhead Triceps Extension', 3, 12, 60],
+          ])
+        },
+        // Day 4: Friday
+        {
+          name: 'Rest Day (วันพัก หรือเล่นชดเชย)',
+          rest: true,
+          items: []
+        },
+        // Day 5: Saturday
+        {
+          name: 'Lower & Core (ช่วงล่าง + ท้อง V-Taper)',
+          rest: false,
+          items: cleanItems([
+            ['Goblet Squat', 3, 12, 90],
+            ['Dumbbell Romanian Deadlift', 3, 12, 90],
+            ['Reverse Lunge', 3, 10, 75],
+            ['Calf Raise', 3, 15, 45],
+            ['Plank', 3, 45, 45],
+          ])
+        },
+        // Day 6: Sunday
+        {
+          name: 'Rest Day (วันพักผ่อน)',
+          rest: true,
+          items: []
+        }
+      ]
+    })
+    toast('เปลี่ยนตารางเป็น "เน้น ไหล่ - อก - แขน" เรียบร้อยแล้ว!')
+  }
+
+  const applyStandardPlan = () => {
+    if (!confirm('ยืนยันรีเซ็ตกลับเป็น "ตารางมาตรฐาน (Upper / Lower)"?\n(ประวัติการฝึกเดิมของคุณจะไม่หาย)')) return
+    update(s => {
+      const getExId = (name) => s.exercises.find(e => e.name.toLowerCase() === name.toLowerCase())?.id
+      const makeItem = (name, sets, reps, rest) => {
+        const eId = getExId(name)
+        return eId ? { id: uid(), exId: eId, sets, reps, rest } : null
+      }
+      const cleanItems = (list) => list.map(item => makeItem(...item)).filter(Boolean)
+
+      s.plan.days = [
+        {
+          name: 'Upper A',
+          rest: false,
+          items: cleanItems([
+            ['Push-up Board (Green Position)', 3, 10, 90],
+            ['Dumbbell Floor Press', 3, 12, 90],
+            ['One-arm Dumbbell Row', 3, 12, 75],
+            ['Dumbbell Shoulder Press', 3, 10, 90],
+            ['Biceps Curl', 3, 12, 60],
+            ['Overhead Triceps Extension', 3, 12, 60],
+          ])
+        },
+        {
+          name: 'Lower A',
+          rest: false,
+          items: cleanItems([
+            ['Goblet Squat', 3, 12, 90],
+            ['Dumbbell Romanian Deadlift', 3, 12, 90],
+            ['Reverse Lunge', 3, 10, 75],
+            ['Calf Raise', 3, 15, 45],
+            ['Plank', 3, 40, 45],
+          ])
+        },
+        { name: 'Rest Day', rest: true, items: [] },
+        {
+          name: 'Upper B',
+          rest: false,
+          items: cleanItems([
+            ['Push-up Board (Green Position)', 3, 10, 90],
+            ['Bent-over Dumbbell Row', 3, 12, 75],
+            ['Dumbbell Pullover', 3, 12, 75],
+            ['Prone Y-T Raise', 3, 10, 60],
+            ['Hammer Curl', 3, 12, 60],
+            ['Close-grip Push-up', 3, 10, 75],
+          ])
+        },
+        { name: 'Rest Day', rest: true, items: [] },
+        {
+          name: 'Lower B',
+          rest: false,
+          items: cleanItems([
+            ['Bodyweight Squat', 3, 15, 60],
+            ['Dumbbell Glute Bridge', 3, 15, 60],
+            ['Dumbbell Romanian Deadlift', 3, 12, 90],
+            ['Reverse Lunge', 3, 10, 75],
+            ['Calf Raise', 3, 15, 45],
+            ['Reverse Crunch', 3, 15, 45],
+          ])
+        },
+        { name: 'Rest Day', rest: true, items: [] },
+      ]
+    })
+    toast('รีเซ็ตเป็นตารางมาตรฐานเรียบร้อย')
+  }
+
   return (
     <>
       <div style={{ marginBottom: 20 }}>
@@ -53,6 +222,31 @@ export default function Schedule() {
         <p className="mut" style={{ margin: 0, fontSize: 14 }}>
           กำหนดตารางฝึกประจำสัปดาห์ (การแก้ไขตารางจะไม่กระทบประวัติการฝึกเดิมที่เคยบันทึกไว้)
         </p>
+      </div>
+
+      <div className="card" style={{
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.2))',
+        border: '1px solid var(--g2)',
+        marginBottom: 20
+      }}>
+        <div className="sp" style={{ flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <b style={{ fontSize: 16, color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🎯</span> เทมเพลตโปรแกรมฝึกแนะนำ
+            </b>
+            <p className="mut" style={{ margin: '4px 0 0', fontSize: 13 }}>
+              คลิกเพื่อตั้งค่าตารางโปรแกรมตามเป้าหมายได้ในคลิกเดียว
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="b p" onClick={applyVTaperFocusPlan} style={{ fontSize: 13 }}>
+              🔥 ตารางเน้น ไหล่ - อก - แขน
+            </button>
+            <button className="b s" onClick={applyStandardPlan} style={{ fontSize: 13 }}>
+              ⚡ ตารางเดิม (Upper/Lower)
+            </button>
+          </div>
+        </div>
       </div>
 
       {S.plan.days.map((day, d) => (
