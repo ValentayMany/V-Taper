@@ -166,11 +166,7 @@ export default function Dashboard() {
           </b>
           <span className="mut" style={{ fontSize: 12 }}>คลิกเพื่อดูหรือสลับโปรแกรม</span>
         </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
-          gap: 8
-        }}>
+        <div className="week-strip">
           {weekDates.map((dateStr) => {
             const st = dstat(dateStr)
             const isT = dateStr === t
@@ -186,18 +182,18 @@ export default function Dashboard() {
                   background: isT ? 'var(--c3)' : 'var(--c2)',
                   border: isT ? '1px solid var(--g)' : '1px solid var(--ln)',
                   borderRadius: 'var(--radius-md)',
-                  padding: '10px 8px',
+                  padding: '11px 8px',
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   position: 'relative'
                 }}
               >
-                <div style={{ fontSize: 11, color: isT ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
+                <div style={{ fontSize: 12, color: isT ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
                   {dayNameShort} ({dateStr.slice(8)})
                 </div>
                 <div style={{
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   margin: '4px 0 6px',
                   whiteSpace: 'nowrap',

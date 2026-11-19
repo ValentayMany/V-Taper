@@ -612,47 +612,135 @@ tr:last-child td {
   border-color: var(--ln-light);
 }
 
+/* Weekly Strip */
+.week-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.week-strip::-webkit-scrollbar {
+  display: none;
+}
+.week-strip > div {
+  flex: 0 0 calc((100% - 24px) / 3.8);
+  min-width: 96px;
+}
+@media (min-width: 768px) {
+  .week-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    overflow: visible;
+  }
+  .week-strip > div {
+    min-width: 0;
+  }
+}
+
 /* Mobile Bottom Nav */
 #bnav {
   display: none;
 }
 
 @media (max-width: 820px) {
+  html, body {
+    font-size: 16px; /* Enhanced baseline font for mobile legibility */
+  }
   aside {
     display: none;
   }
   main {
-    padding: 20px 16px 100px;
+    padding: 18px 14px calc(95px + env(safe-area-inset-bottom, 16px));
   }
   h1 {
-    font-size: 22px;
-    margin-bottom: 16px;
+    font-size: 24px;
+    margin-bottom: 14px;
   }
   .grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
   .card {
-    padding: 16px;
+    padding: 18px 15px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-lg);
   }
   .st {
-    padding: 14px;
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
+  }
+  .st span {
+    font-size: 14px;
+    font-weight: 600;
   }
   .st b {
-    font-size: 24px;
+    font-size: 28px;
   }
+  .mut {
+    font-size: 13.5px;
+  }
+
+  /* Form controls touch friendly (16px prevents iOS/Chrome viewport zoom) */
+  input, select, textarea {
+    font-size: 16px !important;
+    padding: 11px 12px;
+    border-radius: var(--radius-md);
+  }
+  input.n {
+    width: 72px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 9px 4px;
+  }
+
+  /* Buttons touch friendly */
+  .b {
+    font-size: 15px;
+    padding: 11px 16px;
+    min-height: 42px;
+    border-radius: var(--radius-md);
+  }
+  .b.s {
+    font-size: 13.5px;
+    padding: 8px 14px;
+    min-height: 36px;
+  }
+  .b.p {
+    font-size: 16px;
+    padding: 13px 18px;
+  }
+
+  /* Badge font size */
+  .bd {
+    font-size: 12.5px;
+    padding: 4px 10px;
+  }
+
+  /* Daily Table row touch targets */
+  table td, table th {
+    padding: 9px 6px;
+  }
+
+  /* Calendar */
+  .cal div {
+    font-size: 15px;
+    padding: 11px 0;
+  }
+
+  /* Solid bottom navigation to avoid background text bleed */
   #bnav {
     display: flex;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(14, 19, 26, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--ln);
-    z-index: 50;
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: #0d1218;
+    border-top: 1px solid var(--ln-light);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    padding: 6px 2px calc(8px + env(safe-area-inset-bottom, 12px));
     justify-content: space-around;
   }
   #bnav .nv {
@@ -660,14 +748,20 @@ tr:last-child td {
     align-items: center;
     justify-content: center;
     gap: 3px;
-    font-size: 11px;
-    padding: 6px 8px;
-    min-width: 50px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 4px;
+    min-width: 48px;
     width: auto;
     white-space: nowrap;
     border-radius: var(--radius-md);
   }
   #bnav .nv span:first-child {
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+  #bnav .nv.on {
+    color: var(--g-bright);
+    background: rgba(16, 185, 129, 0.15);
   }
 }
