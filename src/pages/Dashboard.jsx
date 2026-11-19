@@ -10,6 +10,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const t = today()
   const [calMonth, setCalMonth] = useState(t.slice(0, 7))
+  const [selectedWeekDate, setSelectedWeekDate] = useState(t)
 
   const exById = (id) => S.exercises.find(e => e.id === id)
   const sess = (d) => S.sessions.find(s => s.date === d)
@@ -158,55 +159,150 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Weekly Day-by-Day Status Strip */}
-      <div className="card" style={{ padding: '16px' }}>
-        <div className="sp" style={{ marginBottom: 12 }}>
-          <b style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>📅</span> สถานะการฝึกประจำสัปดาห์นี้
+      {/* 7-Day Unified Weekly Strip */}
+      <div className="card" style={{ padding: '16px 14px' }}>
+        <div style={{ marginBottom: 12 }}>
+          <b style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📅</span> ตารางสัปดาห์นี้
           </b>
-          <span className="mut" style={{ fontSize: 12 }}>คลิกเพื่อดูหรือสลับโปรแกรม</span>
+          <span className="mut" style={{ fontSize: 12.5, display: 'block', marginTop: 2 }}>
+            แตะเลือกวันเพื่อดูโปรแกรมหรือสลับวันฝึก
+          </span>
         </div>
-        <div className="week-strip">
+
+        {/* 7 Columns Grid - Fits All Screens Completely Smooth Without Clipping */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          gap: 5,
+          background: 'var(--c2)',
+          padding: '8px 4px',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--ln)'
+        }}>
           {weekDates.map((dateStr) => {
             const st = dstat(dateStr)
-            const isT = dateStr === t
-            const sDay = S.plan.days[dow(dateStr)]
-            const sItem = sess(dateStr)
+            const isToday = dateStr === t
+            const isSelected = dateStr === (selectedWeekDate || t)
             const dayNameShort = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'][dow(dateStr)]
+            const dayNum = dateStr.slice(8)
+
+            // Status Indicator Dot
+            let dot = '⚪'
+            if (st === 'completed') dot = '🟢'
+            else if (st === 'partial') dot = '🟡'
+            else if (st === 'swapped_rest') dot = '🔵'
+            else if (st === 'rest') dot = '💤'
+            else if (st === 'planned-rest') dot = '💤'
+            else if (st === 'skipped') dot = '🔴'
 
             return (
               <div
                 key={dateStr}
-                onClick={() => navigate(`/daily/${dateStr}`)}
+                onClick={() => setSelectedWeekDate(dateStr)}
                 style={{
-                  background: isT ? 'var(--c3)' : 'var(--c2)',
-                  border: isT ? '1px solid var(--g)' : '1px solid var(--ln)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 2px',
                   borderRadius: 'var(--radius-md)',
-                  padding: '11px 8px',
-                  textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
-                  position: 'relative'
+                  background: isSelected
+                    ? 'rgba(16, 185, 129, 0.18)'
+                    : isToday
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'transparent',
+                  border: isSelected
+                    ? '1.5px solid var(--g)'
+                    : isToday
+                    ? '1px dashed var(--g-bright)'
+                    : '1px solid transparent'
                 }}
               >
-                <div style={{ fontSize: 12, color: isT ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
-                  {dayNameShort} ({dateStr.slice(8)})
-                </div>
-                <div style={{
-                  fontSize: 13,
+                <span style={{
+                  fontSize: 11,
                   fontWeight: 700,
-                  margin: '4px 0 6px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+                  color: isSelected ? 'var(--g-bright)' : isToday ? 'var(--tx)' : 'var(--mt)',
+                  marginBottom: 4
                 }}>
-                  {sItem ? sItem.dayName.split(' ')[0] : sDay.name.split(' ')[0]}
+                  {dayNameShort}
+                </span>
+
+                <div style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 99,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  background: isToday
+                    ? 'var(--g-grad)'
+                    : isSelected
+                    ? 'var(--c3)'
+                    : 'transparent',
+                  color: isToday ? '#032011' : 'var(--tx)',
+                  boxShadow: isToday ? '0 2px 8px rgba(16, 185, 129, 0.4)' : undefined,
+                  marginBottom: 5
+                }}>
+                  {dayNum}
                 </div>
-                <Badge status={st} />
+
+                <div style={{ fontSize: 13, lineHeight: 1 }}>
+                  {dot}
+                </div>
               </div>
             )
           })}
         </div>
+
+        {/* Selected Day Info Pill */}
+        {(() => {
+          const selDate = selectedWeekDate || t
+          const selSt = dstat(selDate)
+          const selPlan = S.plan.days[dow(selDate)]
+          const selSess = sess(selDate)
+          const selDayLong = ['วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์', 'วันอาทิตย์'][dow(selDate)]
+          const isT = selDate === t
+
+          return (
+            <div style={{
+              marginTop: 12,
+              background: 'var(--c2)',
+              border: '1px solid var(--ln-light)',
+              borderRadius: 'var(--radius-md)',
+              padding: '11px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10
+            }}>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{isT ? '⭐ วันนี้ ·' : '📅'}</span>
+                  <span>{selDayLong} ({selDate.slice(8)}):</span>
+                  <span style={{ color: 'var(--g-bright)' }}>
+                    {selSess ? selSess.dayName : selPlan.name}
+                  </span>
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <Badge status={selSt} />
+                </div>
+              </div>
+              <button
+                className="b p"
+                style={{ fontSize: 13, padding: '7px 14px' }}
+                onClick={() => navigate(`/daily/${selDate}`)}
+              >
+                {isT ? 'เปิดหน้าฝึกวันนี้ ›' : 'ดูรายละเอียดวันนี้นี้ ›'}
+              </button>
+            </div>
+          )
+        })()}
       </div>
 
       <div className="card">
