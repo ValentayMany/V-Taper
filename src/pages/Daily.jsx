@@ -7,6 +7,111 @@ import RestTimer from '../components/RestTimer'
 
 const DN = ['วันจันทร์ (Monday)', 'วันอังคาร (Tuesday)', 'วันพุธ (Wednesday)', 'วันพฤหัสบดี (Thursday)', 'วันศุกร์ (Friday)', 'วันเสาร์ (Saturday)', 'วันอาทิตย์ (Sunday)']
 
+const getHomeGuide = (name = '') => {
+  const n = name.toLowerCase()
+  if (n.includes('push-up board') || n.includes('green position') || (n.includes('push-up') && !n.includes('close'))) {
+    return {
+      badgeText: '🟢 ช่องสีเขียว (Chest)',
+      badgeBg: 'rgba(16, 185, 129, 0.15)',
+      badgeColor: '#34d399',
+      title: 'บอร์ดวิดพื้น: ช่องสีเขียว (สร้างอกกว้าง)',
+      tip: 'กางศอก 45 องศากับลำตัว (ไม่กาง 90 องศาเพื่อเซฟไหล่) เกร็งหน้าท้องลำตัวตรง',
+      proTip: '💡 ทริคอกบน: นำขาวางบนเตียง/เก้าอี้ (Decline) น้ำหนักตัวจะลงยอดอกถึง 75% แน่นเหมือนยกเบนช์เพรสหนักๆ!'
+    }
+  }
+  if (n.includes('close-grip') || n.includes('triceps push-up')) {
+    return {
+      badgeText: '🔵 ช่องชิดกลาง (Triceps)',
+      badgeBg: 'rgba(56, 189, 248, 0.15)',
+      badgeColor: '#38bdf8',
+      title: 'บอร์ดวิดพื้น: ช่องแคบ (เน้นหลังแขน + อกใน)',
+      tip: 'เสียบด้ามจับช่องชิดกลาง ขนานลำตัว หนีบข้อศอกแนบชิดสีข้างขณะลดตัวลง',
+      proTip: '💡 ทริคแขนแน่น: ที่จุดบนสุด ล็อคข้อศอกและเกร็งหลังแขนค้างไว้ 1 วินาทีเพื่อบีบเลือดเข้ากล้ามเนื้อ'
+    }
+  }
+  if (n.includes('lateral raise')) {
+    return {
+      badgeText: '🔱 ไหล่กว้าง V-Taper (5kg ทรงพลัง)',
+      badgeBg: 'rgba(245, 158, 11, 0.15)',
+      badgeColor: '#fbbf24',
+      title: 'ดัมเบล 5kg น้ำหนักทองคำของไหล่ข้าง',
+      tip: 'โน้มตัวไปข้างหน้าเล็กน้อย ยกข้อศอกนำมือ ไม่ต้องยกสูงเกินระดับไหล่',
+      proTip: '💡 เทคนิคกล้ามโต: ค้างที่จุดสูงสุด 1-2 วินาที แล้วลดแขนลงช้าๆ 3 วินาที (ห้ามใช้แรงเหวี่ยงตัว)'
+    }
+  }
+  if (n.includes('floor press')) {
+    return {
+      badgeText: '🏋️‍♂️ อกหนา (Floor Press 5kg)',
+      badgeBg: 'rgba(16, 185, 129, 0.15)',
+      badgeColor: '#34d399',
+      title: 'นอนดันดัมเบลบนพื้นห้อง ปลอดภัยต่อหัวไหล่',
+      tip: 'นอนราบบนเสื่อ/พื้น ดันดัมเบลขึ้นตรงๆ บีบหน้าอกเข้าหากันที่จุดสูงสุด',
+      proTip: '💡 เทคนิค 5kg: เมื่อศอกแตะพื้นให้หยุด 1 วินาที (Dead stop) แล้วระเบิดแรงดันขึ้น ห้ามเด้งศอกกับพื้น'
+    }
+  }
+  if (n.includes('biceps curl') || (n.includes('biceps') && !n.includes('hammer'))) {
+    return {
+      badgeText: '💪 หน้าแขนลูกกลม (Biceps)',
+      badgeBg: 'rgba(139, 92, 246, 0.15)',
+      badgeColor: '#a78bfa',
+      title: 'สร้างยอดลูกหนูให้กลมเด่น',
+      tip: 'ล็อคข้อศอกให้อยู่ข้างลำตัวตลอดเวลา ไม่แกว่งข้อศอกไปข้างหน้า',
+      proTip: '💡 เทคนิค 5kg: บิดข้อมือออกด้านนอก (Supination) ที่จุดสูงสุด พร้อมเกร็งหน้าแขนแน่นๆ 1 วินาที'
+    }
+  }
+  if (n.includes('hammer')) {
+    return {
+      badgeText: '🔨 แขนหนาด้านข้าง (Brachialis)',
+      badgeBg: 'rgba(139, 92, 246, 0.15)',
+      badgeColor: '#a78bfa',
+      title: 'สร้างความหนาของแขนเมื่อมองจากด้านหน้า',
+      tip: 'หันฝ่ามือเข้าหากันเหมือนถือค้อน ล็อคศอกข้างลำตัว ยกขึ้นลงอย่างช้าๆ',
+      proTip: '💡 ประโยชน์ต่อ V-Taper: กล้ามเนื้อ Brachialis จะดันกล้าม Biceps ให้ปูดขึ้น ทำให้แขนดูใหญ่และเต็มขึ้น'
+    }
+  }
+  if (n.includes('overhead triceps') || n.includes('skull crusher')) {
+    return {
+      badgeText: '⚡ หลังแขนรูปเกือกม้า (Triceps)',
+      badgeBg: 'rgba(56, 189, 248, 0.15)',
+      badgeColor: '#38bdf8',
+      title: 'หลังแขนมีขนาดถึง 65% ของท่อนแขนทั้งหมด',
+      tip: 'ถือดัมเบลสองมือเหนือศีรษะ (หรือข้างละ 5kg) ล็อคศอกชี้ขึ้นเพดาน ค่อยๆ พับศอกลงหลังศีรษะ',
+      proTip: '💡 เทคนิค 5kg: ดันขึ้นจนสุดแขนเพื่อบีบ Long Head ของหลังแขนให้ทำงานเต็มพิกัด'
+    }
+  }
+  if (n.includes('shoulder press')) {
+    return {
+      badgeText: '🛡️ หัวไหล่มวลรวม (Delts)',
+      badgeBg: 'rgba(245, 158, 11, 0.15)',
+      badgeColor: '#fbbf24',
+      title: 'สร้างมวลไหล่รอบทิศทาง',
+      tip: 'กดก้นแน่น ดันดัมเบลขึ้นเหนือหัวเป็นวิถีโค้งเล็กน้อย ไม่แอ่นหลังส่วนล่าง',
+      proTip: '💡 เทคนิค 5kg: ลดดัมเบลลงช้าๆ ให้ถึงระดับใบหู แล้วดันขึ้นโดยไม่กระชาก'
+    }
+  }
+  if (n.includes('one-arm') || n.includes('dumbbell row')) {
+    return {
+      badgeText: '🦅 ปีกกว้าง V-Taper (Lats)',
+      badgeBg: 'rgba(16, 185, 129, 0.15)',
+      badgeColor: '#34d399',
+      title: 'ดึงปีกให้กว้างเพื่อรับกับเอวที่คอด',
+      tip: 'วางเข่าข้างหนึ่งบนเก้าอี้/เตียง โน้มตัวขนานพื้น ดึงดัมเบลเข้าหาเอว (ไม่ใช่ดึงขึ้นหาอก)',
+      proTip: '💡 ทริคปีก V-Taper: จังหวะดึง ให้จินตนาการว่ากำลังเอาข้อศอกแทงไปข้างหลัง แล้วบีบปีก 1 วินาที'
+    }
+  }
+  if (n.includes('pullover')) {
+    return {
+      badgeText: '🫁 ขยายกรงอก & ยืดปีก (Pullover)',
+      badgeBg: 'rgba(16, 185, 129, 0.15)',
+      badgeColor: '#34d399',
+      title: 'ท่ายืดอกและกล้ามเนื้อ Serratus ด้านข้าง',
+      tip: 'นอนหงาย ถือดัมเบล 5kg สองมือเหนืออก ค่อยๆ หย่อนดัมเบลข้ามศีรษะลงช้าๆ',
+      proTip: '💡 สัมผัส: รู้สึกถึงการยืดเหยียดของกรงอกและปีก หายใจเข้าลึกๆ จังหวะลดลง'
+    }
+  }
+  return null
+}
+
 export default function Daily() {
   const { date: paramDate } = useParams()
   const navigate = useNavigate()
@@ -24,6 +129,38 @@ export default function Daily() {
   }, [d])
 
   const exById = (id) => S.exercises.find(e => e.id === id)
+
+  const getPrevExerciseRecord = (exId, exName) => {
+    const pastSessions = S.sessions
+      .filter(s => s.date < d && s.status !== 'rest')
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+
+    for (const session of pastSessions) {
+      const matchEx = session.exercises?.find(
+        x => (x.exId && x.exId === exId) || (exName && x.name?.trim().toLowerCase() === exName.trim().toLowerCase())
+      )
+      if (matchEx && matchEx.sets && matchEx.sets.length > 0) {
+        const validSets = matchEx.sets.filter(st => +st.reps > 0)
+        if (validSets.length > 0) {
+          const bestReps = Math.max(...validSets.map(st => +st.reps))
+          const bestKg = Math.max(...validSets.map(st => +st.kg || 0))
+          const summary = validSets
+            .map(st => `${st.reps} ครั้ง${st.kg ? ` @${st.kg}kg` : ''}`)
+            .join(', ')
+
+          return {
+            date: session.date,
+            sets: validSets,
+            bestReps,
+            bestKg,
+            summary,
+            targetReps: bestReps + 1,
+          }
+        }
+      }
+    }
+    return null
+  }
   const sess = S.sessions.find(s => s.date === d)
   const y = S.plan.days[dow(d)]
 
@@ -382,19 +519,30 @@ export default function Daily() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-              {displayPlan.items.map((item, i) => (
-                <div key={i} className="ex-row">
-                  <div>
-                    <span style={{ fontWeight: 600 }}>{exById(item.exId)?.name || '?'}</span>
-                    <span className="mut" style={{ fontSize: 12, marginLeft: 8 }}>
-                      ({exById(item.exId)?.muscle || '-'})
-                    </span>
+              {displayPlan.items.map((item, i) => {
+                const ex = exById(item.exId)
+                const prev = ex ? getPrevExerciseRecord(ex.id, ex.name) : null
+                return (
+                  <div key={i} className="ex-row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{ex?.name || '?'}</span>
+                      <span className="mut" style={{ fontSize: 12, marginLeft: 8 }}>
+                        ({ex?.muscle || '-'})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {prev && (
+                        <span style={{ fontSize: 11, color: 'var(--b)', background: 'var(--b-bg)', padding: '2px 8px', borderRadius: 99 }}>
+                          📜 ล่าสุด: {prev.bestReps} ครั้ง
+                        </span>
+                      )}
+                      <span className="bd planned" style={{ fontSize: 12 }}>
+                        {item.sets} เซ็ต × {item.reps} ครั้ง · พัก {item.rest}s
+                      </span>
+                    </div>
                   </div>
-                  <span className="bd planned" style={{ fontSize: 12 }}>
-                    {item.sets} เซ็ต × {item.reps} ครั้ง · พัก {item.rest}s
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
           <div className="row" style={{ marginTop: 16, gap: 10, flexWrap: 'wrap' }}>
@@ -464,68 +612,149 @@ export default function Daily() {
             </div>
           </div>
 
-          {sess.exercises.map((e, i) => (
-            <div key={i} className={`card ${e.done ? 'dn' : ''}`} style={{ borderColor: e.done ? 'var(--g2)' : undefined }}>
-              <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <b style={{ fontSize: 17 }}>{e.name}</b>
-                    <span className="bd" style={{ background: 'var(--c2)', fontSize: 11 }}>{e.muscle}</span>
-                  </div>
-                  <span className="mut" style={{ fontSize: 13 }}>
-                    เป้าหมาย {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest} วินาที
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    className="b s"
-                    onClick={() => setActiveTimerSeconds(e.rest || 60)}
-                    title="เริ่มนับเวลาพักของท่านี้"
-                  >
-                    ⏱️ พัก {e.rest || 60}s
-                  </button>
-                  {e.done && <span className="bd completed">✓ เสร็จแล้ว</span>}
-                </div>
-              </div>
+          {sess.exercises.map((e, i) => {
+            const prevRecord = getPrevExerciseRecord(e.exId, e.name)
+            const homeGuide = getHomeGuide(e.name)
 
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 44, textAlign: 'center' }}>เซ็ต</th>
-                      <th>ครั้ง</th>
-                      <th>น้ำหนัก (กก.)</th>
-                      <th>พัก (วิ)</th>
-                      <th>เหนื่อย (1-10)</th>
-                      <th style={{ width: 36 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {e.sets.map((set, j) => (
-                      <tr key={j}>
-                        <td style={{ fontWeight: 700, color: 'var(--g-bright)', textAlign: 'center' }}>{j + 1}</td>
-                        {['reps', 'kg', 'rest', 'rpe'].map(f => (
-                          <td key={f}>
-                            <input
-                              className="n" type="number"
-                              step={f === 'kg' ? '0.5' : '1'}
-                              value={set[f]}
-                              placeholder={
-                                f === 'reps' ? String(e.targetReps) :
-                                f === 'kg' ? '0' :
-                                f === 'rest' ? String(e.rest) :
-                                '1-10'
-                              }
-                              onChange={ev => handleSetField(i, j, f, ev.target.value)}
-                            />
-                          </td>
-                        ))}
-                        <td><button className="b s d" onClick={() => deleteSet(i, j)} title="ลบเซ็ตนี้">✕</button></td>
+            return (
+              <div key={i} className={`card ${e.done ? 'dn' : ''}`} style={{ borderColor: e.done ? 'var(--g2)' : undefined }}>
+                <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <b style={{ fontSize: 17 }}>{e.name}</b>
+                      <span className="bd" style={{ background: 'var(--c2)', fontSize: 11 }}>{e.muscle}</span>
+                    </div>
+                    <span className="mut" style={{ fontSize: 13 }}>
+                      เป้าหมาย {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest} วินาที
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      className="b s"
+                      onClick={() => setActiveTimerSeconds(e.rest || 60)}
+                      title="เริ่มนับเวลาพักของท่านี้"
+                    >
+                      ⏱️ พัก {e.rest || 60}s
+                    </button>
+                    {e.done && <span className="bd completed">✓ เสร็จแล้ว</span>}
+                  </div>
+                </div>
+
+                {/* Overload / Previous Record Indicator */}
+                {prevRecord ? (
+                  <div style={{
+                    background: 'rgba(56, 189, 248, 0.08)',
+                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '8px 12px',
+                    marginBottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8
+                  }}>
+                    <div style={{ fontSize: 12, color: 'var(--b)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📜</span> <b>สถิติล่าสุด ({prevRecord.date}):</b> {prevRecord.summary}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--g-bright)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>🔥</span> เป้าหมายวันนี้: ท้าทายให้ได้ {prevRecord.targetReps}+ ครั้ง!
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid var(--ln)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '6px 10px',
+                    marginBottom: 12,
+                    fontSize: 12,
+                    color: 'var(--mt)'
+                  }}>
+                    🌱 บันทึกครั้งแรกสำหรับท่านี้ — ใส่จำนวนครั้งที่ทำไหวได้เลย!
+                  </div>
+                )}
+
+                {/* Home Workout & Push-up Board Guide */}
+                {homeGuide && (
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.06)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '9px 12px',
+                    marginBottom: 12,
+                    fontSize: 12
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{
+                        background: homeGuide.badgeBg,
+                        color: homeGuide.badgeColor,
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 99,
+                        fontSize: 11
+                      }}>
+                        {homeGuide.badgeText}
+                      </span>
+                      <b style={{ color: 'var(--tx)' }}>{homeGuide.title}</b>
+                    </div>
+                    <div className="mut" style={{ lineHeight: 1.45 }}>
+                      {homeGuide.tip}
+                    </div>
+                    {homeGuide.proTip && (
+                      <div style={{ color: 'var(--g-bright)', marginTop: 4, fontWeight: 500 }}>
+                        {homeGuide.proTip}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ width: 44, textAlign: 'center' }}>เซ็ต</th>
+                        <th>ครั้ง</th>
+                        <th>น้ำหนัก (กก.)</th>
+                        <th>พัก (วิ)</th>
+                        <th>เหนื่อย (1-10)</th>
+                        <th style={{ width: 36 }}></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {e.sets.map((set, j) => {
+                        const prevSet = prevRecord?.sets[j]
+                        return (
+                          <tr key={j}>
+                            <td style={{ fontWeight: 700, color: 'var(--g-bright)', textAlign: 'center' }}>{j + 1}</td>
+                            {['reps', 'kg', 'rest', 'rpe'].map(f => (
+                              <td key={f}>
+                                <input
+                                  className="n" type="number"
+                                  step={f === 'kg' ? '0.5' : '1'}
+                                  value={set[f]}
+                                  placeholder={
+                                    f === 'reps' ? (prevSet ? String(prevSet.reps) : String(e.targetReps)) :
+                                    f === 'kg' ? (prevSet && prevSet.kg ? String(prevSet.kg) : '5') :
+                                    f === 'rest' ? String(e.rest) :
+                                    '1-10'
+                                  }
+                                  onChange={ev => handleSetField(i, j, f, ev.target.value)}
+                                />
+                                {f === 'reps' && prevSet && (
+                                  <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
+                                    เดิม: {prevSet.reps}
+                                  </div>
+                                )}
+                              </td>
+                            ))}
+                            <td><button className="b s d" onClick={() => deleteSet(i, j)} title="ลบเซ็ตนี้">✕</button></td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
               <input
                 style={{ width: '100%', marginTop: 12 }}
@@ -542,7 +771,8 @@ export default function Daily() {
                 <button className="b s d" onClick={() => removeExercise(i)}>ลบท่านี้</button>
               </div>
             </div>
-          ))}
+          )
+        })}
 
           <div className="card">
             <h3 style={{ marginBottom: 12 }}>➕ เพิ่มท่าฝึกเพิ่มเติม</h3>
