@@ -601,7 +601,7 @@ export default function Daily() {
       <div className="card sp" style={{ borderLeft: '4px solid var(--g)' }}>
         <div>
           <span className="mut" style={{ fontSize: 13, display: 'block' }}>{DN[dow(d)]}</span>
-          <b style={{ fontSize: 18 }}>{y.name}</b>
+          <b style={{ fontSize: 18 }}>{sess ? sess.dayName : y.name}</b>
         </div>
         <Badge status={dstat()} />
       </div>
@@ -800,35 +800,37 @@ export default function Daily() {
             </div>
           )}
 
-          <div className="card" style={{ padding: '10px 14px', background: 'var(--c2)' }}>
-            <div className="sp" style={{ flexWrap: 'wrap', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>⏱️ จับเวลาพักด่วน:</span>
-                {wakeLockActive && (
-                  <span style={{
-                    fontSize: 11,
-                    color: 'var(--g-bright)',
-                    background: 'var(--g-bg)',
-                    padding: '2px 8px',
-                    borderRadius: 99,
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}>
-                    <span>📱</span> จอเปิดค้างไว้
-                  </span>
-                )}
-              </div>
-              <div className="row" style={{ margin: 0, gap: 6 }}>
-                {[30, 45, 60, 90, 120].map(sec => (
-                  <button key={sec} className="b s" onClick={() => setActiveTimerSeconds(sec)}>
-                    {sec}วิ
-                  </button>
-                ))}
+          {sess.status !== 'completed' && (
+            <div className="card" style={{ padding: '10px 14px', background: 'var(--c2)' }}>
+              <div className="sp" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>⏱️ จับเวลาพักด่วน:</span>
+                  {wakeLockActive && (
+                    <span style={{
+                      fontSize: 11,
+                      color: 'var(--g-bright)',
+                      background: 'var(--g-bg)',
+                      padding: '2px 8px',
+                      borderRadius: 99,
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      <span>📱</span> จอเปิดค้างไว้
+                    </span>
+                  )}
+                </div>
+                <div className="row" style={{ margin: 0, gap: 6 }}>
+                  {[30, 45, 60, 90, 120].map(sec => (
+                    <button key={sec} className="b s" onClick={() => setActiveTimerSeconds(sec)}>
+                      {sec}วิ
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {sess.exercises.map((e, i) => {
             const prevRecord = getPrevExerciseRecord(e.exId, e.name)
@@ -884,8 +886,8 @@ export default function Daily() {
                   </div>
                 </div>
 
-                {/* Previous Record - Latest Only */}
-                {prevRecord && (() => {
+                {/* Previous Record - Latest Only (hide on completed past sessions) */}
+                {sess.status !== 'completed' && prevRecord && (() => {
                   const repsArr = prevRecord.sets.map(st => st.reps)
                   const allSame = repsArr.length > 1 && repsArr.every(r => String(r) === String(repsArr[0]))
                   const latestStr = allSame
@@ -906,8 +908,8 @@ export default function Daily() {
                   )
                 })()}
 
-                {/* Home Workout Guide (collapsed) */}
-                {homeGuide && (
+                {/* Home Workout Guide (hide on completed past sessions) */}
+                {sess.status !== 'completed' && homeGuide && (
                   <div style={{
                     background: 'rgba(16, 185, 129, 0.06)',
                     border: '1px solid rgba(16, 185, 129, 0.2)',
@@ -936,10 +938,11 @@ export default function Daily() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                   {e.sets.map((set, j) => {
                     const prevSet = prevRecord?.sets[j]
+                    const isSetDone = !!(set.done || (e.done && +set.reps > 0))
                     return (
                       <div key={j} className="set-card" style={{
-                        background: set.done ? 'rgba(16, 185, 129, 0.1)' : 'var(--c2)',
-                        border: set.done ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--ln)',
+                        background: isSetDone ? 'rgba(16, 185, 129, 0.1)' : 'var(--c2)',
+                        border: isSetDone ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--ln)',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 12px',
                         transition: 'all 0.2s ease'
@@ -948,8 +951,8 @@ export default function Daily() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{
-                              background: set.done ? 'var(--g)' : 'rgba(16, 185, 129, 0.15)',
-                              color: set.done ? '#032011' : 'var(--g-bright)',
+                              background: isSetDone ? 'var(--g)' : 'rgba(16, 185, 129, 0.15)',
+                              color: isSetDone ? '#032011' : 'var(--g-bright)',
                               fontWeight: 800,
                               fontSize: 12,
                               width: 28,
@@ -959,7 +962,7 @@ export default function Daily() {
                               justifyContent: 'center',
                               borderRadius: 99
                             }}>
-                              {set.done ? '✓' : j + 1}
+                              {isSetDone ? '✓' : j + 1}
                             </span>
                             <span style={{ fontSize: 12, color: 'var(--mt)' }}>
                               เป้า: <b style={{ color: 'var(--tx)' }}>{targetDisplay}</b>
@@ -987,14 +990,14 @@ export default function Daily() {
                                 fontSize: 12,
                                 fontWeight: 700,
                                 borderRadius: 'var(--radius-sm)',
-                                border: set.done ? 'none' : '1px solid var(--ln)',
-                                background: set.done ? 'var(--g)' : 'rgba(255, 255, 255, 0.05)',
-                                color: set.done ? '#032011' : 'var(--mt)',
+                                border: isSetDone ? 'none' : '1px solid var(--ln)',
+                                background: isSetDone ? 'var(--g)' : 'rgba(255, 255, 255, 0.05)',
+                                color: isSetDone ? '#032011' : 'var(--mt)',
                                 cursor: 'pointer',
                                 minHeight: 30
                               }}
                             >
-                              {set.done ? '✓ เสร็จ' : '○ บันทึก'}
+                              {isSetDone ? '✓ เสร็จ' : '○ บันทึก'}
                             </button>
                             <button className="b s d" onClick={() => deleteSet(i, j)} style={{ padding: '5px 8px', fontSize: 12, minHeight: 30 }}>✕</button>
                           </div>
@@ -1085,8 +1088,8 @@ export default function Daily() {
                   })}
                 </div>
 
-                {/* Next Workout Recommendation - Compact */}
-                {nextRec && (
+                {/* Next Workout Recommendation - Compact (hide on completed past sessions) */}
+                {sess.status !== 'completed' && nextRec && (
                   <div style={{
                     background: 'rgba(18, 24, 32, 0.65)',
                     border: '1px solid rgba(16, 185, 129, 0.2)',

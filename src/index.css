@@ -592,8 +592,8 @@ tr:last-child td {
 
 /* States */
 .dn {
-  opacity: 0.5;
-  text-decoration: line-through;
+  opacity: 0.92;
+  border-color: rgba(16, 185, 129, 0.35) !important;
 }
 
 /* Workout Items & Exercise List */
