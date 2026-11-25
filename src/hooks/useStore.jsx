@@ -23,11 +23,10 @@ export function StoreProvider({ children }) {
           s = await seedToSupabase()
         }
         if (s) {
-          const needsMigration = (s.planVersion || 1) < 2
-          migrateStore(s)
+          const needsSync = migrateStore(s)
           save(s)
           setStore(s)
-          if (needsMigration) {
+          if (needsSync) {
             syncStoreToSupabase(s).catch(() => {})
           }
         }

@@ -127,14 +127,48 @@ export function applyLeanVTaperProgram(store) {
   store.planVersion = 2
 }
 
+/** Clean up sets that were accidentally doubled (2x/4x targetSets) by earlier concurrent Supabase syncs */
+export function cleanDuplicatedSets(store) {
+  let changed = false
+  ;(store.sessions || []).forEach(sess => {
+    ;(sess.exercises || []).forEach(ex => {
+      const tSets = Number(ex.targetSets) || 3
+      if (Array.isArray(ex.sets) && ex.sets.length >= tSets * 2 && ex.sets.length % tSets === 0) {
+        // Verify first set and repeated block share the same reps before trimming
+        const firstReps = String(ex.sets[0]?.reps ?? '')
+        const blockReps = String(ex.sets[tSets]?.reps ?? '')
+        if (firstReps && firstReps === blockReps) {
+          ex.sets = ex.sets.slice(0, tSets)
+          changed = true
+        }
+      }
+    })
+  })
+  return changed
+}
+
 /** Safe one-time migration that preserves all workout history, measures, and settings */
 export function migrateStore(store) {
-  if (!store || !store.plan) return store
+  if (!store || !store.plan) return false
+  let changed = false
   ensureProgramExercises(store)
-  if ((store.planVersion || 1) < 2) {
+
+  const planMigrated = typeof localStorage !== 'undefined' && localStorage.getItem('vtaper.planV2') === '1'
+  if (!planMigrated && (store.planVersion || 1) < 2) {
     applyLeanVTaperProgram(store)
+    if (typeof localStorage !== 'undefined') localStorage.setItem('vtaper.planV2', '1')
+    changed = true
+  } else {
+    store.planVersion = 2
   }
-  return store
+
+  const dupCleaned = typeof localStorage !== 'undefined' && localStorage.getItem('vtaper.cleanedDupSets.v1') === '1'
+  if (!dupCleaned) {
+    if (cleanDuplicatedSets(store)) changed = true
+    if (typeof localStorage !== 'undefined') localStorage.setItem('vtaper.cleanedDupSets.v1', '1')
+  }
+
+  return changed
 }
 
 export function seed() {
