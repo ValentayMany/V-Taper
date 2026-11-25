@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, createContext, useContext, useEffect } from 'react'
 import { load, save } from '../services/db'
-import { seed } from '../services/seedData'
+import { seed, migrateStore } from '../services/seedData'
 import { loadFromSupabase, seedToSupabase, syncStoreToSupabase } from '../services/supabaseSync'
 
 const StoreCtx = createContext(null)
@@ -23,13 +23,19 @@ export function StoreProvider({ children }) {
           s = await seedToSupabase()
         }
         if (s) {
+          const needsMigration = (s.planVersion || 1) < 2
+          migrateStore(s)
           save(s)
           setStore(s)
+          if (needsMigration) {
+            syncStoreToSupabase(s).catch(() => {})
+          }
         }
       } catch (err) {
         console.warn('Supabase load error, falling back to localStorage:', err)
         let s = load()
         if (!s || !s.plan) { s = seed(); save(s) }
+        else { migrateStore(s); save(s) }
         setStore(s)
       } finally {
         setLoading(false)

@@ -1,5 +1,6 @@
 import { useStore } from '../hooks/useStore'
 import { uid } from '../services/db'
+import { applyLeanVTaperProgram } from '../services/seedData'
 
 const DN = ['วันจันทร์ (Monday)', 'วันอังคาร (Tuesday)', 'วันพุธ (Wednesday)', 'วันพฤหัสบดี (Thursday)', 'วันศุกร์ (Friday)', 'วันเสาร์ (Saturday)', 'วันอาทิตย์ (Sunday)']
 
@@ -150,69 +151,11 @@ export default function Schedule() {
   }
 
   const applyStandardPlan = () => {
-    if (!confirm('ยืนยันรีเซ็ตกลับเป็น "ตารางมาตรฐาน (Upper / Lower)"?\n(ประวัติการฝึกเดิมของคุณจะไม่หาย)')) return
+    if (!confirm('ยืนยันตั้งค่าเป็น "โปรแกรม Lean V-Taper 4 วัน (Upper / Lower)"?\n(ประวัติการฝึกเดิมของคุณจะไม่หาย)')) return
     update(s => {
-      const getExId = (name) => s.exercises.find(e => e.name.toLowerCase() === name.toLowerCase())?.id
-      const makeItem = (name, sets, reps, rest) => {
-        const eId = getExId(name)
-        return eId ? { id: uid(), exId: eId, sets, reps, rest } : null
-      }
-      const cleanItems = (list) => list.map(item => makeItem(...item)).filter(Boolean)
-
-      s.plan.days = [
-        {
-          name: 'Upper A',
-          rest: false,
-          items: cleanItems([
-            ['Push-up Board (Green Position)', 3, 10, 90],
-            ['Dumbbell Floor Press', 3, 12, 90],
-            ['One-arm Dumbbell Row', 3, 12, 75],
-            ['Dumbbell Shoulder Press', 3, 10, 90],
-            ['Biceps Curl', 3, 12, 60],
-            ['Overhead Triceps Extension', 3, 12, 60],
-          ])
-        },
-        {
-          name: 'Lower A',
-          rest: false,
-          items: cleanItems([
-            ['Goblet Squat', 3, 12, 90],
-            ['Dumbbell Romanian Deadlift', 3, 12, 90],
-            ['Reverse Lunge', 3, 10, 75],
-            ['Calf Raise', 3, 15, 45],
-            ['Plank', 3, 40, 45],
-          ])
-        },
-        { name: 'Rest Day', rest: true, items: [] },
-        {
-          name: 'Upper B',
-          rest: false,
-          items: cleanItems([
-            ['Push-up Board (Green Position)', 3, 10, 90],
-            ['Bent-over Dumbbell Row', 3, 12, 75],
-            ['Dumbbell Pullover', 3, 12, 75],
-            ['Prone Y-T Raise', 3, 10, 60],
-            ['Hammer Curl', 3, 12, 60],
-            ['Close-grip Push-up', 3, 10, 75],
-          ])
-        },
-        { name: 'Rest Day', rest: true, items: [] },
-        {
-          name: 'Lower B',
-          rest: false,
-          items: cleanItems([
-            ['Bodyweight Squat', 3, 15, 60],
-            ['Dumbbell Glute Bridge', 3, 15, 60],
-            ['Dumbbell Romanian Deadlift', 3, 12, 90],
-            ['Reverse Lunge', 3, 10, 75],
-            ['Calf Raise', 3, 15, 45],
-            ['Reverse Crunch', 3, 15, 45],
-          ])
-        },
-        { name: 'Rest Day', rest: true, items: [] },
-      ]
+      applyLeanVTaperProgram(s)
     })
-    toast('รีเซ็ตเป็นตารางมาตรฐานเรียบร้อย')
+    toast('อัปเดตเป็นโปรแกรม Lean V-Taper 4 วันเรียบร้อย ✓')
   }
 
   const buildScheduleExportText = () => {
@@ -235,7 +178,8 @@ export default function Schedule() {
         if (muscle && muscle !== '-') {
           muscleVolume[muscle] = (muscleVolume[muscle] || 0) + sets
         }
-        return `  ${n + 1}. **${name}** (${muscle} | ${equip}) — ${sets} เซ็ต × ${item.reps} ครั้ง · พัก ${item.rest} วินาที`
+        const repLabel = item.repRange || `${item.reps} ครั้ง`
+        return `  ${n + 1}. **${name}** (${muscle} | ${equip}) — ${sets} เซ็ต × ${repLabel} · พัก ${item.rest} วินาที`
       })
       return `### ${DN[idx]} — ${day.name}\n${lines.length > 0 ? lines.join('\n') : '  - (ยังไม่มีท่าฝึก)'}`
     })
@@ -338,7 +282,7 @@ export default function Schedule() {
               🔥 ตารางเน้น ไหล่ - อก - แขน
             </button>
             <button className="b s" onClick={applyStandardPlan} style={{ fontSize: 13 }}>
-              ⚡ ตารางเดิม (Upper/Lower)
+              ✨ โปรแกรม Lean V-Taper 4 วัน (ใหม่)
             </button>
           </div>
         </div>

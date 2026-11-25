@@ -117,6 +117,28 @@ const isBodyweightExercise = (name = '') => {
   return n.includes('push-up') || n.includes('pushup') || n.includes('plank') || n.includes('bodyweight') || n.includes('dip') || n.includes('pull-up') || n.includes('chin-up')
 }
 
+const isTimedExercise = (ex) => {
+  if (ex?.timed) return true
+  const n = (ex?.name || '').toLowerCase()
+  return n.includes('plank')
+}
+
+const isPerSideExercise = (ex) => {
+  if (ex?.perSide) return true
+  const n = (ex?.name || '').toLowerCase()
+  return n.includes('one-arm') || n.includes('reverse lunge') || n.includes('side plank')
+}
+
+const parseRepRange = (repRange, fallback = 12) => {
+  if (repRange) {
+    const nums = String(repRange).match(/\d+/g)
+    if (nums && nums.length >= 2) return { min: +nums[0], max: +nums[1] }
+    if (nums && nums.length === 1) return { min: +nums[0], max: +nums[0] }
+  }
+  const n = Number(fallback) || 12
+  return { min: Math.max(1, n - 4), max: n }
+}
+
 const getDefaultKg = (name = '') => isBodyweightExercise(name) ? '0' : '5'
 
 export default function Daily() {
@@ -219,17 +241,43 @@ export default function Daily() {
 
   const getNextWorkoutRecommendation = (exercise, prevRecord) => {
     const validSets = exercise.sets.filter(s => +s.reps > 0)
-    const targetReps = exercise.targetReps || 10
     const targetSets = exercise.targetSets || 3
+    const { min: targetMin, max: targetMax } = parseRepRange(exercise.repRange, exercise.targetReps)
+    const unit = isTimedExercise(exercise) ? 'วิ' : 'ครั้ง'
+    const sideLabel = isPerSideExercise(exercise) ? '/ข้าง' : ''
+
+    const computeNextTargets = (setsArr) => {
+      // Pad or trim to targetSets
+      const repsList = Array.from({ length: targetSets }, (_, idx) => {
+        const s = setsArr[idx]
+        return s ? (+s.reps || 0) : 0
+      })
+      const incomplete = setsArr.length < targetSets || repsList.some(r => r === 0)
+      if (incomplete) {
+        // Do not increase reps if previous session was incomplete
+        return repsList.map(r => (r > 0 ? r : targetMin))
+      }
+      const allAtMax = repsList.every(r => r >= targetMax)
+      if (allAtMax) {
+        // Safe cap: stay at max or +1-2 with controlled tempo (respecting 5kg equipment)
+        return repsList.map(() => targetMax)
+      }
+      // Bring lagging sets up first toward the highest completed set (up to targetMax)
+      const highest = Math.min(targetMax, Math.max(...repsList))
+      return repsList.map(r => (r < highest ? Math.min(targetMax, r + 2, highest) : Math.min(targetMax, r + 1)))
+    }
 
     if (validSets.length === 0) {
       if (prevRecord) {
+        const prevList = prevRecord.sets.map(s => +s.reps)
+        const nextList = computeNextTargets(prevRecord.sets)
+        const prevIncomplete = prevList.length < targetSets
         return {
-          icon: '🎯',
-          badge: 'เป้าวันนี้',
-          badgeBg: 'rgba(56, 189, 248, 0.15)',
-          badgeColor: '#38bdf8',
-          shortText: `ครั้งก่อนสูงสุด ${prevRecord.bestReps} ครั้ง — วันนี้ลองดันให้ถึง ${prevRecord.bestReps + 1}+ ครั้ง`
+          icon: prevIncomplete ? '📋' : '🎯',
+          badge: prevIncomplete ? 'ทำเซ็ตให้ครบ' : 'เป้าวันนี้',
+          badgeBg: prevIncomplete ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+          badgeColor: prevIncomplete ? '#fbbf24' : '#38bdf8',
+          shortText: `ครั้งก่อน: ${prevList.join(' / ')} ${unit}${sideLabel} → เป้าวันนี้: ${nextList.join(' / ')} ${unit}${sideLabel}`
         }
       }
       return {
@@ -237,13 +285,13 @@ export default function Daily() {
         badge: 'ครั้งแรก',
         badgeBg: 'rgba(16, 185, 129, 0.15)',
         badgeColor: '#34d399',
-        shortText: `โฟกัสฟอร์มที่ถูกต้อง แล้วบันทึกจำนวนครั้งที่ทำไหว`
+        shortText: `ตั้งเป้า ${targetSets} เซ็ต × ${exercise.repRange || `${targetMin}–${targetMax} ${unit}${sideLabel}`} · พัก ${exercise.rest}วิ`
       }
     }
 
-    const allMetTarget = validSets.length >= targetSets && validSets.every(s => +s.reps >= targetReps)
     const bestReps = Math.max(...validSets.map(s => +s.reps))
-    const avgReps = (validSets.reduce((sum, s) => sum + (+s.reps), 0) / validSets.length).toFixed(1)
+    const allMetMax = validSets.length >= targetSets && validSets.every(s => +s.reps >= targetMax)
+    const allMetMin = validSets.length >= targetSets && validSets.every(s => +s.reps >= targetMin)
 
     if (prevRecord && prevRecord.bestReps > 0 && bestReps < prevRecord.bestReps && validSets.length >= 2) {
       return {
@@ -251,26 +299,27 @@ export default function Daily() {
         badge: 'เน้นฟื้นฟู',
         badgeBg: 'rgba(245, 158, 11, 0.15)',
         badgeColor: '#fbbf24',
-        shortText: `ลดลงจากเดิม (${bestReps} vs ${prevRecord.bestReps}) — คงน้ำหนักเดิม เน้นฟอร์มและพักผ่อนให้พอ`
+        shortText: `ลดลงจากครั้งก่อน (${bestReps} vs ${prevRecord.bestReps} ${unit}) — คงน้ำหนักเดิม เน้นฟอร์มและพักผ่อน`
       }
     }
 
-    if (allMetTarget) {
+    if (allMetMax) {
       return {
         icon: '🔥',
         badge: 'พร้อมพัฒนา',
         badgeBg: 'rgba(16, 185, 129, 0.18)',
         badgeColor: '#34d399',
-        shortText: `ครบเป้าทุกเซ็ต! ครั้งหน้าลองเพิ่มเป็น ${targetReps + 1}-${targetReps + 2} ครั้ง หรือค้างเกร็ง 2 วิ`
+        shortText: `ครบเป้าสูงสุด (${targetMax} ${unit}) ทุกเซ็ต! ครั้งหน้าค้างจังหวะ 2 วิ หรือลดเวลาพักลง`
       }
     }
 
+    const nextList = computeNextTargets(validSets)
     return {
       icon: '📈',
-      badge: 'สะสมแรง',
+      badge: allMetMin ? 'สะสมแรงต่อ' : 'เก็บให้ครบเซ็ต',
       badgeBg: 'rgba(56, 189, 248, 0.15)',
       badgeColor: '#38bdf8',
-      shortText: `เฉลี่ย ${avgReps}/${targetReps} ครั้ง — คงน้ำหนักเดิม ค่อยๆ เพิ่มทีละ 1 ครั้ง`
+      shortText: `วันนี้: ${validSets.map(s => s.reps).join(' / ')} → ครั้งหน้าตั้งเป้า: ${nextList.join(' / ')} ${unit}${sideLabel}`
     }
   }
 
@@ -310,8 +359,12 @@ export default function Daily() {
             exId: item.exId,
             name: e.name,
             muscle: e.muscle,
+            equip: e.equip || '-',
             targetSets: item.sets,
             targetReps: item.reps,
+            repRange: item.repRange || e.repRange || '',
+            perSide: !!(item.perSide || e.perSide),
+            timed: !!(item.timed || e.timed),
             rest: item.rest,
             done: false,
             note: '',
@@ -360,8 +413,12 @@ export default function Daily() {
           exId: item.exId,
           name: e.name,
           muscle: e.muscle,
+          equip: e.equip || '-',
           targetSets: item.sets,
           targetReps: item.reps,
+          repRange: item.repRange || e.repRange || '',
+          perSide: !!(item.perSide || e.perSide),
+          timed: !!(item.timed || e.timed),
           rest: item.rest,
           done: false,
           note: '',
@@ -373,13 +430,22 @@ export default function Daily() {
   }
 
   const handleSetField = (i, j, field, val) => {
-    const R = { reps: [0, 999], kg: [0, 500], rest: [0, 1800], rpe: [1, 10] }[field]
+    const R = { reps: [0, 999], repsLeft: [0, 999], repsRight: [0, 999], kg: [0, 500], rest: [0, 1800], rpe: [1, 10] }[field]
     if (val !== '' && !(+val >= R[0] && +val <= R[1])) {
       toast(`${field} ต้องอยู่ระหว่าง ${R[0]}–${R[1]}`, true); return
     }
     update(s => {
       const ss = s.sessions.find(x => x.date === d)
-      ss.exercises[i].sets[j][field] = val
+      const st = ss.exercises[i].sets[j]
+      st[field] = val
+      if (field === 'repsLeft' || field === 'repsRight') {
+        const l = st.repsLeft !== '' && st.repsLeft != null ? +st.repsLeft : null
+        const r = st.repsRight !== '' && st.repsRight != null ? +st.repsRight : null
+        if (l !== null && r !== null) st.reps = String(Math.min(l, r))
+        else if (l !== null) st.reps = String(l)
+        else if (r !== null) st.reps = String(r)
+        else st.reps = ''
+      }
     }, true)
   }
 
@@ -450,8 +516,12 @@ export default function Daily() {
         exId: targetEx.id,
         name: targetEx.name,
         muscle: targetEx.muscle,
+        equip: targetEx.equip || '-',
         targetSets: targetEx.sets,
         targetReps: targetEx.reps,
+        repRange: targetEx.repRange || '',
+        perSide: !!targetEx.perSide,
+        timed: !!targetEx.timed,
         rest: targetEx.rest,
         done: false,
         note: '',
@@ -649,6 +719,9 @@ export default function Daily() {
               {displayPlan.items.map((item, i) => {
                 const ex = exById(item.exId)
                 const prev = ex ? getPrevExerciseRecord(ex.id, ex.name) : null
+                const timed = !!(item.timed || ex?.timed || isTimedExercise(ex))
+                const perSide = !!(item.perSide || ex?.perSide || isPerSideExercise(ex))
+                const targetLabel = item.repRange || `${item.reps} ${timed ? 'วิ' : 'ครั้ง'}${perSide ? '/ข้าง' : ''}`
                 return (
                   <div key={i} className="ex-row" style={{ flexWrap: 'wrap', gap: 6 }}>
                     <div>
@@ -660,11 +733,11 @@ export default function Daily() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {prev && (
                         <span style={{ fontSize: 11, color: 'var(--b)', background: 'var(--b-bg)', padding: '2px 8px', borderRadius: 99 }}>
-                          📜 ล่าสุด: {prev.bestReps} ครั้ง
+                          📜 ล่าสุด: {prev.bestReps} {timed ? 'วิ' : 'ครั้ง'}
                         </span>
                       )}
                       <span className="bd planned" style={{ fontSize: 12 }}>
-                        {item.sets} เซ็ต × {item.reps} ครั้ง · พัก {item.rest}s
+                        {item.sets} เซ็ต × {targetLabel} · พัก {item.rest}s
                       </span>
                     </div>
                   </div>
@@ -761,6 +834,10 @@ export default function Daily() {
             const homeGuide = getHomeGuide(e.name)
             const nextRec = getNextWorkoutRecommendation(e, prevRecord)
             const isBW = isBodyweightExercise(e.name)
+            const isTimed = isTimedExercise(e)
+            const isPerSide = isPerSideExercise(e)
+            const unitLabel = isTimed ? 'วินาที' : 'ครั้ง'
+            const targetDisplay = e.repRange || `${e.targetReps} ${isTimed ? 'วิ' : 'ครั้ง'}${isPerSide ? '/ข้าง' : ''}`
             const doneSetsCount = e.sets.filter(s => s.done || +s.reps > 0).length
             const targetSetsCount = e.targetSets || e.sets.length || 3
             const progressPercent = Math.min(100, Math.round((doneSetsCount / targetSetsCount) * 100))
@@ -777,9 +854,15 @@ export default function Daily() {
                         {isBW && (
                           <span className="bd" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: 10.5 }}>BW</span>
                         )}
+                        {isPerSide && (
+                          <span className="bd" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontSize: 10.5 }}>ซ้าย/ขวา</span>
+                        )}
+                        {isTimed && (
+                          <span className="bd" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontSize: 10.5 }}>จับเวลา</span>
+                        )}
                       </div>
                       <div className="mut" style={{ fontSize: 12.5, marginTop: 3 }}>
-                        {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest}วิ
+                        {e.targetSets} เซ็ต × {targetDisplay} · พัก {e.rest}วิ
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -880,7 +963,7 @@ export default function Daily() {
                               {set.done ? '✓' : j + 1}
                             </span>
                             <span style={{ fontSize: 12, color: 'var(--mt)' }}>
-                              เป้า: <b style={{ color: 'var(--tx)' }}>{e.targetReps} ครั้ง</b>
+                              เป้า: <b style={{ color: 'var(--tx)' }}>{targetDisplay}</b>
                             </span>
                             {prevRecord && set.reps && +set.reps > prevRecord.bestReps && (
                               <span style={{
@@ -920,23 +1003,47 @@ export default function Daily() {
 
                         {/* Input Grid — 4 cols on desktop, 2x2 on mobile */}
                         <div className="set-input-grid">
-                          <div>
-                            <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
-                              ทำได้จริง (ครั้ง)
-                            </label>
-                            <input
-                              className="n" type="number" step="1"
-                              value={set.reps}
-                              placeholder={prevSet ? String(prevSet.reps) : String(e.targetReps)}
-                              onChange={ev => handleSetField(i, j, 'reps', ev.target.value)}
-                              style={{ width: '100%' }}
-                            />
-                            {prevSet && !set.reps && (
-                              <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2 }}>
-                                เดิม: {prevSet.reps}
+                          {isPerSide ? (
+                            <div>
+                              <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                                ซ้าย / ขวา ({unitLabel})
+                              </label>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                                <input
+                                  className="n" type="number" step="1"
+                                  value={set.repsLeft ?? set.reps ?? ''}
+                                  placeholder="ซ้าย"
+                                  onChange={ev => handleSetField(i, j, 'repsLeft', ev.target.value)}
+                                  style={{ width: '100%' }}
+                                />
+                                <input
+                                  className="n" type="number" step="1"
+                                  value={set.repsRight ?? set.reps ?? ''}
+                                  placeholder="ขวา"
+                                  onChange={ev => handleSetField(i, j, 'repsRight', ev.target.value)}
+                                  style={{ width: '100%' }}
+                                />
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                                {isTimed ? 'เวลาที่ทำได้ (วินาที)' : 'ทำได้จริง (ครั้ง)'}
+                              </label>
+                              <input
+                                className="n" type="number" step="1"
+                                value={set.reps}
+                                placeholder={prevSet ? String(prevSet.reps) : String(e.targetReps)}
+                                onChange={ev => handleSetField(i, j, 'reps', ev.target.value)}
+                                style={{ width: '100%' }}
+                              />
+                              {prevSet && !set.reps && (
+                                <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2 }}>
+                                  เดิม: {prevSet.reps} {isTimed ? 'วิ' : ''}
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <div>
                             <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
                               {isBW ? 'น้ำหนัก (BW)' : 'น้ำหนัก (กก.)'}

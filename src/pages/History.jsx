@@ -256,6 +256,12 @@ export default function History() {
                     const allSameKg = validSets.length > 0 && validSets.every(x => normKg(x) === firstKg)
                     const exTotalReps = validSets.reduce((sum, x) => sum + (+x.reps || 0), 0)
 
+                    const isTimed = !!(e.timed || e.name?.toLowerCase().includes('plank'))
+                    const unit = isTimed ? 'วิ' : 'ครั้ง'
+                    const formatRep = (x) => (x.repsLeft != null && x.repsRight != null && (x.repsLeft !== '' || x.repsRight !== ''))
+                      ? `L${x.repsLeft || 0}/R${x.repsRight || 0}`
+                      : x.reps
+
                     return (
                       <div key={i} className="ex-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6, padding: '10px 12px' }}>
                         <div className="sp" style={{ width: '100%', gap: 8 }}>
@@ -291,10 +297,10 @@ export default function History() {
                                   borderRadius: 'var(--radius-sm)',
                                   padding: '3px 9px'
                                 }}>
-                                  {validSets.length} เซ็ต × {firstReps} ครั้ง
+                                  {validSets.length} เซ็ต × {firstReps} {unit}
                                 </span>
                                 <span className="mut" style={{ fontSize: 12 }}>
-                                  รวม {exTotalReps} ครั้ง
+                                  รวม {exTotalReps} {unit}
                                 </span>
                               </div>
                               <button
@@ -331,7 +337,7 @@ export default function History() {
                                         fontVariantNumeric: 'tabular-nums'
                                       }}
                                     >
-                                      <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {x.reps}
+                                      <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {formatRep(x)}{isTimed ? 'วิ' : ''}
                                       {!allSameKg && (kgLabel === 'BW' ? ' (BW)' : ` × ${kgLabel}kg`)}
                                       {x.rpe ? <span className="mut"> · RPE {x.rpe}</span> : null}
                                     </span>

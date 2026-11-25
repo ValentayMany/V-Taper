@@ -35,13 +35,42 @@ export default function Dashboard() {
   const weekDates = Array.from({ length: 7 }, (_, i) => add(ws, i))
   const statuses = weekDates.map(dstat)
   const planWorkouts = S.plan.days.filter(x => !x.rest).length || 1
+  const planRestDays = S.plan.days.filter(x => x.rest).length
   const trained = statuses.filter(x => x === 'completed' || x === 'partial').length
   const completed = statuses.filter(x => x === 'completed').length
   const restDays = statuses.filter(x => x === 'rest' || x === 'swapped_rest').length
   const pc = Math.min(100, Math.round(completed / planWorkouts * 100))
 
-  // Weekly total reps (Home Workout Overload)
+  // Weekly total reps & sets (Completed vs Planned)
   const weekSessions = weekDates.map(sess).filter(Boolean)
+  const plannedSetsThisWeek = S.plan.days
+    .filter(x => !x.rest)
+    .reduce((acc, d) => acc + (d.items || []).reduce((a, it) => a + (Number(it.sets) || 0), 0), 0)
+  const completedSetsThisWeek = weekSessions.reduce((acc, s) => {
+    return acc + (s.exercises || []).reduce((a, e) => {
+      return a + (e.sets || []).filter(st => st.done || +st.reps > 0).length
+    }, 0)
+  }, 0)
+
+  // Muscle group weekly volume (Planned vs Completed sets)
+  const muscleVolume = {}
+  S.plan.days.filter(x => !x.rest).forEach(d => {
+    (d.items || []).forEach(it => {
+      const m = exById(it.exId)?.muscle
+      if (!m) return
+      if (!muscleVolume[m]) muscleVolume[m] = { planned: 0, done: 0 }
+      muscleVolume[m].planned += Number(it.sets) || 0
+    })
+  })
+  weekSessions.forEach(s => {
+    (s.exercises || []).forEach(e => {
+      const m = e.muscle || exById(e.exId)?.muscle
+      if (!m) return
+      if (!muscleVolume[m]) muscleVolume[m] = { planned: 0, done: 0 }
+      muscleVolume[m].done += (e.sets || []).filter(st => st.done || +st.reps > 0).length
+    })
+  })
+  const muscleVolumeList = Object.entries(muscleVolume).sort((a, b) => b[1].planned - a[1].planned)
   const totalRepsThisWeek = weekSessions.reduce((acc, s) => {
     return acc + (s.exercises || []).reduce((a, e) => {
       return a + (e.sets || []).reduce((b, st) => b + (+st.reps || 0), 0)
@@ -150,7 +179,9 @@ export default function Dashboard() {
         <div className="sp">
           <div>
             <h3 style={{ margin: 0 }}>ความสำเร็จประจำสัปดาห์</h3>
-            <span className="mut" style={{ fontSize: 13 }}>เป้าหมายตามโปรแกรมการฝึก</span>
+            <span className="mut" style={{ fontSize: 13 }}>
+              ฝึก {planWorkouts} วัน · พัก {planRestDays} วัน · เซ็ตสำเร็จ {completedSetsThisWeek}/{plannedSetsThisWeek} เซ็ต
+            </span>
           </div>
           <b style={{ fontSize: 22, color: 'var(--g-bright)' }}>{pc}%</b>
         </div>
@@ -158,6 +189,31 @@ export default function Dashboard() {
           <i style={{ width: `${pc}%` }} />
         </div>
       </div>
+
+      {muscleVolumeList.length > 0 && (
+        <div className="card" style={{ padding: '14px 16px' }}>
+          <div className="sp" style={{ marginBottom: 10 }}>
+            <b style={{ fontSize: 15 }}>💪 ปริมาณฝึกแยกกลุ่มกล้ามเนื้อสัปดาห์นี้</b>
+            <span className="mut" style={{ fontSize: 12 }}>ทำแล้ว / เป้าหมาย (เซ็ต)</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
+            {muscleVolumeList.map(([m, v]) => {
+              const pct = v.planned > 0 ? Math.min(100, Math.round((v.done / v.planned) * 100)) : 0
+              return (
+                <div key={m} style={{ background: 'var(--c2)', border: '1px solid var(--ln)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
+                  <div className="sp" style={{ fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{m}</span>
+                    <b style={{ color: v.done >= v.planned && v.planned > 0 ? 'var(--g-bright)' : 'var(--tx)' }}>{v.done}/{v.planned}</b>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--c)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: v.done >= v.planned && v.planned > 0 ? 'var(--g)' : 'var(--b)', borderRadius: 99 }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 7-Day Unified Weekly Strip */}
       <div className="card" style={{ padding: '16px 14px' }}>

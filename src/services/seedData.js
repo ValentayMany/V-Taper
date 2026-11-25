@@ -1,61 +1,152 @@
 import { uid, today } from './db'
 
-export function seed() {
-  const L = [
-    ['Push-up Board (Green Position)', 'Chest', 'Push-up Board', 3, 10, 90],
-    ['Dumbbell Floor Press', 'Chest', 'Dumbbell', 3, 12, 90],
-    ['Incline Dumbbell Press', 'Chest', 'Dumbbell', 3, 12, 90],
-    ['Dumbbell Lateral Raise', 'Shoulders', 'Dumbbell', 3, 15, 60],
-    ['One-arm Dumbbell Row', 'Back', 'Dumbbell', 3, 12, 75],
-    ['Dumbbell Shoulder Press', 'Shoulders', 'Dumbbell', 3, 10, 90],
-    ['Biceps Curl', 'Biceps', 'Dumbbell', 3, 12, 60],
-    ['Overhead Triceps Extension', 'Triceps', 'Dumbbell', 3, 12, 60],
-    ['Goblet Squat', 'Legs', 'Dumbbell', 3, 12, 90],
-    ['Dumbbell Romanian Deadlift', 'Legs', 'Dumbbell', 3, 12, 90],
-    ['Reverse Lunge', 'Legs', 'Dumbbell', 3, 10, 75],
-    ['Calf Raise', 'Calves', 'Dumbbell', 3, 15, 45],
-    ['Plank', 'Core', 'Bodyweight', 3, 40, 45],
-    ['Bent-over Dumbbell Row', 'Back', 'Dumbbell', 3, 12, 75],
-    ['Dumbbell Pullover', 'Chest', 'Dumbbell', 3, 12, 75],
-    ['Prone Y-T Raise', 'Shoulders', 'Bodyweight', 3, 10, 60],
-    ['Hammer Curl', 'Biceps', 'Dumbbell', 3, 12, 60],
-    ['Close-grip Push-up', 'Triceps', 'Push-up Board', 3, 10, 75],
-    ['Bodyweight Squat', 'Legs', 'Bodyweight', 3, 15, 60],
-    ['Dumbbell Glute Bridge', 'Glutes', 'Dumbbell', 3, 15, 60],
-    ['Reverse Crunch', 'Core', 'Bodyweight', 3, 15, 45],
-  ]
+const BASE_EXERCISES = [
+  { name: 'Push-up Board (Green Position)', muscle: 'Chest', equip: 'Push-up Board', sets: 3, reps: 15, repRange: '8–15', rest: 90 },
+  { name: 'Dumbbell Floor Press', muscle: 'Chest', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '10–15', rest: 90 },
+  { name: 'Incline Dumbbell Press', muscle: 'Chest', equip: 'Dumbbell', sets: 3, reps: 12, repRange: '10–12', rest: 90 },
+  { name: 'Dumbbell Lateral Raise', muscle: 'Shoulders', equip: 'Dumbbell', sets: 3, reps: 20, repRange: '12–20', rest: 60 },
+  { name: 'Dumbbell Reverse Fly', muscle: 'Shoulders', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '12–15', rest: 60 },
+  { name: 'One-arm Dumbbell Row', muscle: 'Back', equip: 'Dumbbell', sets: 3, reps: 20, repRange: '12–20/side', rest: 75, perSide: true },
+  { name: 'Dumbbell Shoulder Press', muscle: 'Shoulders', equip: 'Dumbbell', sets: 3, reps: 10, repRange: '8–12', rest: 90 },
+  { name: 'Biceps Curl', muscle: 'Biceps', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+  { name: 'Overhead Triceps Extension', muscle: 'Triceps', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+  { name: 'Goblet Squat', muscle: 'Legs', equip: 'Dumbbell', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+  { name: 'Dumbbell Romanian Deadlift', muscle: 'Legs', equip: 'Dumbbell', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+  { name: 'Reverse Lunge', muscle: 'Legs', equip: 'Dumbbell', sets: 2, reps: 12, repRange: '10–12/side', rest: 75, perSide: true },
+  { name: 'Calf Raise', muscle: 'Calves', equip: 'Dumbbell', sets: 3, reps: 20, repRange: '15–20', rest: 45 },
+  { name: 'Plank', muscle: 'Core', equip: 'Bodyweight', sets: 3, reps: 45, repRange: '30–45 sec', rest: 45, timed: true },
+  { name: 'Side Plank', muscle: 'Core', equip: 'Bodyweight', sets: 2, reps: 40, repRange: '20–40 sec/side', rest: 45, timed: true, perSide: true },
+  { name: 'Bent-over Dumbbell Row', muscle: 'Back', equip: 'Dumbbell', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+  { name: 'Dumbbell Pullover', muscle: 'Chest', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '12–15', rest: 75 },
+  { name: 'Prone Y-T Raise', muscle: 'Shoulders', equip: 'Bodyweight', sets: 3, reps: 10, repRange: '10–12', rest: 60 },
+  { name: 'Hammer Curl', muscle: 'Biceps', equip: 'Dumbbell', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+  { name: 'Close-grip Push-up', muscle: 'Triceps', equip: 'Push-up Board', sets: 2, reps: 12, repRange: '6–12', rest: 75 },
+  { name: 'Bodyweight Squat', muscle: 'Legs', equip: 'Bodyweight', sets: 3, reps: 15, repRange: '12–15', rest: 60 },
+  { name: 'Glute Bridge', muscle: 'Glutes', equip: 'Dumbbell', sets: 2, reps: 20, repRange: '15–20', rest: 60 },
+  { name: 'Reverse Crunch', muscle: 'Core', equip: 'Bodyweight', sets: 3, reps: 15, repRange: '12–15', rest: 45 },
+]
 
-  const ex = L.map(e => ({
-    id: uid(), name: e[0], muscle: e[1], equip: e[2],
-    sets: e[3], reps: e[4], rest: e[5],
-  }))
+export const NEW_WEEKLY_PROGRAM = [
+  {
+    name: 'Upper A (อก, หลัง, ไหล่, แขน)',
+    rest: false,
+    items: [
+      { name: 'Push-up Board (Green Position)', sets: 3, reps: 15, repRange: '8–15', rest: 90 },
+      { name: 'Dumbbell Floor Press', sets: 2, reps: 15, repRange: '10–15', rest: 90 },
+      { name: 'One-arm Dumbbell Row', sets: 3, reps: 20, repRange: '12–20/side', rest: 75, perSide: true },
+      { name: 'Dumbbell Lateral Raise', sets: 3, reps: 20, repRange: '12–20', rest: 60 },
+      { name: 'Biceps Curl', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+      { name: 'Overhead Triceps Extension', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+    ],
+  },
+  {
+    name: 'Lower A (ขา, สะโพก, น่อง, ท้อง)',
+    rest: false,
+    items: [
+      { name: 'Goblet Squat', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+      { name: 'Dumbbell Romanian Deadlift', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+      { name: 'Reverse Lunge', sets: 2, reps: 12, repRange: '10–12/side', rest: 75, perSide: true },
+      { name: 'Calf Raise', sets: 3, reps: 20, repRange: '15–20', rest: 45 },
+      { name: 'Plank', sets: 3, reps: 45, repRange: '30–45 sec', rest: 45, timed: true },
+    ],
+  },
+  { name: 'Rest Day (วันพักฟื้นฟู)', rest: true, items: [] },
+  {
+    name: 'Upper B (ปีกกว้าง, อก, ไหล่ 3 มิติ, แขน)',
+    rest: false,
+    items: [
+      { name: 'Bent-over Dumbbell Row', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+      { name: 'Push-up Board (Green Position)', sets: 3, reps: 15, repRange: '8–15', rest: 90 },
+      { name: 'Dumbbell Pullover', sets: 2, reps: 15, repRange: '12–15', rest: 75 },
+      { name: 'Dumbbell Lateral Raise', sets: 3, reps: 20, repRange: '12–20', rest: 60 },
+      { name: 'Dumbbell Reverse Fly', sets: 2, reps: 15, repRange: '12–15', rest: 60 },
+      { name: 'Hammer Curl', sets: 2, reps: 15, repRange: '10–15', rest: 60 },
+      { name: 'Close-grip Push-up', sets: 2, reps: 12, repRange: '6–12', rest: 75 },
+    ],
+  },
+  { name: 'Rest Day (วันพักฟื้นฟู)', rest: true, items: [] },
+  {
+    name: 'Lower B (ขา, สะโพก, น่อง, ท้อง)',
+    rest: false,
+    items: [
+      { name: 'Goblet Squat', sets: 3, reps: 15, repRange: '12–15', rest: 90 },
+      { name: 'Dumbbell Romanian Deadlift', sets: 2, reps: 15, repRange: '12–15', rest: 90 },
+      { name: 'Glute Bridge', sets: 2, reps: 20, repRange: '15–20', rest: 60 },
+      { name: 'Calf Raise', sets: 3, reps: 20, repRange: '15–20', rest: 45 },
+      { name: 'Side Plank', sets: 2, reps: 40, repRange: '20–40 sec/side', rest: 45, timed: true, perSide: true },
+    ],
+  },
+  { name: 'Rest Day (วันพักฟื้นฟู)', rest: true, items: [] },
+]
 
-  const it = (n) => {
-    const e = ex.find(x => x.name === n)
-    return { id: uid(), exId: e.id, sets: e.sets, reps: e.reps, rest: e.rest }
-  }
-
-  const D = (name, list) => ({
-    name, rest: !list,
-    items: (list || []).map(it),
+/** Ensure all exercises needed by the new program exist without removing user's custom/old exercises */
+export function ensureProgramExercises(store) {
+  if (!store.exercises) store.exercises = []
+  BASE_EXERCISES.forEach(def => {
+    const match = store.exercises.find(e =>
+      e.name.toLowerCase() === def.name.toLowerCase() ||
+      (def.name === 'Glute Bridge' && e.name.toLowerCase() === 'dumbbell glute bridge')
+    )
+    if (!match) {
+      store.exercises.push({ id: uid(), ...def })
+    } else {
+      // Enrich existing exercise metadata safely without changing its id or user's name
+      if (def.perSide && !match.perSide) match.perSide = true
+      if (def.timed && !match.timed) match.timed = true
+      if (def.repRange && !match.repRange) match.repRange = def.repRange
+    }
   })
+}
 
-  return {
+/** Apply the 4-day Lean V-Taper program to store.plan.days while preserving sessions & measures */
+export function applyLeanVTaperProgram(store) {
+  ensureProgramExercises(store)
+  const findEx = (name) => store.exercises.find(e =>
+    e.name.toLowerCase() === name.toLowerCase() ||
+    (name === 'Glute Bridge' && e.name.toLowerCase() === 'dumbbell glute bridge')
+  )
+  if (!store.plan) store.plan = {}
+  store.plan.days = NEW_WEEKLY_PROGRAM.map(day => ({
+    name: day.name,
+    rest: day.rest,
+    items: (day.items || []).map(it => {
+      const ex = findEx(it.name)
+      if (!ex) return null
+      return {
+        id: uid(),
+        exId: ex.id,
+        sets: it.sets,
+        reps: it.reps,
+        repRange: it.repRange,
+        rest: it.rest,
+        ...(it.perSide ? { perSide: true } : {}),
+        ...(it.timed ? { timed: true } : {}),
+      }
+    }).filter(Boolean),
+  }))
+  store.planVersion = 2
+}
+
+/** Safe one-time migration that preserves all workout history, measures, and settings */
+export function migrateStore(store) {
+  if (!store || !store.plan) return store
+  ensureProgramExercises(store)
+  if ((store.planVersion || 1) < 2) {
+    applyLeanVTaperProgram(store)
+  }
+  return store
+}
+
+export function seed() {
+  const store = {
     v: 1,
-    exercises: ex,
+    planVersion: 2,
+    exercises: BASE_EXERCISES.map(e => ({ id: uid(), ...e })),
     settings: { start: today() },
     sessions: [],
     measures: [],
-    plan: {
-      days: [
-        D('Upper A', ['Push-up Board (Green Position)', 'Dumbbell Floor Press', 'One-arm Dumbbell Row', 'Dumbbell Shoulder Press', 'Biceps Curl', 'Overhead Triceps Extension']),
-        D('Lower A', ['Goblet Squat', 'Dumbbell Romanian Deadlift', 'Reverse Lunge', 'Calf Raise', 'Plank']),
-        D('Rest Day'),
-        D('Upper B', ['Push-up Board (Green Position)', 'Bent-over Dumbbell Row', 'Dumbbell Pullover', 'Prone Y-T Raise', 'Hammer Curl', 'Close-grip Push-up']),
-        D('Rest Day'),
-        D('Lower B', ['Bodyweight Squat', 'Dumbbell Glute Bridge', 'Dumbbell Romanian Deadlift', 'Reverse Lunge', 'Calf Raise', 'Reverse Crunch']),
-        D('Rest Day'),
-      ],
-    },
+    plan: { days: [] },
   }
+  applyLeanVTaperProgram(store)
+  return store
 }
