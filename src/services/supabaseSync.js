@@ -229,7 +229,15 @@ export async function syncStoreToSupabase(s) {
     const localSessUUIDs = new Set((s.sessions || []).map(sess => sess.id).filter(id => typeof id === 'string' && id.length === 36))
     const toDeleteSessions = remoteSessions.map(r => r.id).filter(id => !localSessUUIDs.has(id))
     if (toDeleteSessions.length > 0) {
-      await supabase.from('workout_sessions').delete().in('id', toDeleteSessions)
+      // Explicitly delete child workout_sets and session_exercises first in case FK lacks ON DELETE CASCADE
+      const { data: childSexs } = await supabase.from('session_exercises').select('id').in('session_id', toDeleteSessions)
+      if (childSexs && childSexs.length > 0) {
+        const childSexIds = childSexs.map(c => c.id)
+        await supabase.from('workout_sets').delete().in('session_exercise_id', childSexIds)
+        await supabase.from('session_exercises').delete().in('id', childSexIds)
+      }
+      const { error: delSessErr } = await supabase.from('workout_sessions').delete().in('id', toDeleteSessions)
+      if (delSessErr) console.error('Delete workout_sessions error:', delSessErr)
     }
   }
 
@@ -265,7 +273,9 @@ export async function syncStoreToSupabase(s) {
           const localSexIds = new Set(sess.exercises.map(e => e.dbId).filter(Boolean))
           const toDeleteSex = remoteSexs.map(r => r.id).filter(id => !localSexIds.has(id))
           if (toDeleteSex.length > 0) {
-            await supabase.from('session_exercises').delete().in('id', toDeleteSex)
+            await supabase.from('workout_sets').delete().in('session_exercise_id', toDeleteSex)
+            const { error: delSexErr } = await supabase.from('session_exercises').delete().in('id', toDeleteSex)
+            if (delSexErr) console.error('Delete session_exercises error:', delSexErr)
           }
         }
 

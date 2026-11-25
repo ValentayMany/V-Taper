@@ -43,17 +43,22 @@ export function StoreProvider({ children }) {
     })()
   }, [])
 
-  // Auto-sync to Supabase in the background
-  const triggerSupabaseSync = useCallback((nextState) => {
+  // Auto-sync to Supabase in the background (immediate when quiet is false)
+  const triggerSupabaseSync = useCallback((nextState, immediate = false) => {
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
-    syncTimeoutRef.current = setTimeout(async () => {
+    const run = async () => {
       try {
         await syncStoreToSupabase(nextState)
         save(nextState)
       } catch (e) {
         console.error('Auto sync to Supabase error:', e)
       }
-    }, 600)
+    }
+    if (immediate) {
+      run()
+    } else {
+      syncTimeoutRef.current = setTimeout(run, 600)
+    }
   }, [])
 
   // Update local state + persist to localStorage + auto-sync to Supabase
@@ -63,7 +68,7 @@ export function StoreProvider({ children }) {
       const next = JSON.parse(JSON.stringify(prev))
       fn(next)
       save(next) // local instant save
-      triggerSupabaseSync(next) // cloud sync
+      triggerSupabaseSync(next, !quiet) // immediate sync on explicit actions (e.g. delete/complete/save)
       if (!quiet) {
         toasts.current = [...toasts.current, { id: Date.now(), text: 'บันทึกแล้ว ✓', error: false }]
         forceToast(x => x + 1)

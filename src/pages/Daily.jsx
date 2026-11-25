@@ -568,6 +568,7 @@ export default function Daily() {
   const deleteSession = () => {
     if (!confirm('ลบบันทึกการฝึกของวันนี้?')) return
     update(s => { s.sessions = s.sessions.filter(x => x.date !== d) })
+    toast('ลบบันทึกวันนี้เรียบร้อยแล้ว ✓')
   }
 
   return (
