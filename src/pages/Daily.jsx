@@ -602,15 +602,6 @@ export default function Daily() {
         <div>
           <span className="mut" style={{ fontSize: 13, display: 'block' }}>{DN[dow(d)]}</span>
           <b style={{ fontSize: 18 }}>{sess ? sess.dayName : y.name}</b>
-          {sess && sess.status !== 'rest' && (() => {
-            const totalRepsDay = sess.exercises.reduce((a, e) => a + e.sets.reduce((b, st) => b + (+st.reps || 0), 0), 0)
-            const totalSetsDay = setsDone(sess)
-            return totalSetsDay > 0 ? (
-              <span style={{ fontSize: 12.5, color: 'var(--g-bright)', fontWeight: 600, display: 'block', marginTop: 3 }}>
-                💪 วันนี้ทำไปทั้งหมด {totalSetsDay} เซ็ต · {totalRepsDay.toLocaleString()} ครั้ง
-              </span>
-            ) : null
-          })()}
         </div>
         <Badge status={dstat()} />
       </div>
@@ -852,7 +843,6 @@ export default function Daily() {
             const targetDisplay = e.repRange || `${e.targetReps} ${isTimed ? 'วิ' : 'ครั้ง'}${isPerSide ? '/ข้าง' : ''}`
             const doneSetsCount = e.sets.filter(s => s.done || +s.reps > 0).length
             const targetSetsCount = e.targetSets || e.sets.length || 3
-            const exTotalReps = e.sets.reduce((sum, st) => sum + (+st.reps || 0), 0)
             const progressPercent = Math.min(100, Math.round((doneSetsCount / targetSetsCount) * 100))
 
             return (
@@ -879,9 +869,11 @@ export default function Daily() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <button className="b s" onClick={() => setActiveTimerSeconds(e.rest || 60)} style={{ padding: '6px 10px', fontSize: 12 }}>
-                        ⏱ {e.rest || 60}s
-                      </button>
+                      {sess.status !== 'completed' && (
+                        <button className="b s" onClick={() => setActiveTimerSeconds(e.rest || 60)} style={{ padding: '6px 10px', fontSize: 12 }}>
+                          ⏱ {e.rest || 60}s
+                        </button>
+                      )}
                       {e.done && <span className="bd completed" style={{ fontSize: 11 }}>✓</span>}
                     </div>
                   </div>
@@ -891,7 +883,7 @@ export default function Daily() {
                       <div style={{ width: `${progressPercent}%`, height: '100%', background: doneSetsCount >= targetSetsCount ? 'var(--g)' : 'var(--b)', borderRadius: 99, transition: 'width 0.3s ease' }} />
                     </div>
                     <span style={{ fontSize: 11.5, fontWeight: 700, color: doneSetsCount >= targetSetsCount ? 'var(--g-bright)' : 'var(--b)', whiteSpace: 'nowrap' }}>
-                      {doneSetsCount}/{targetSetsCount} เซ็ต{exTotalReps > 0 ? ` · รวม ${exTotalReps} ${isTimed ? 'วิ' : 'ครั้ง'}` : ''}
+                      {doneSetsCount}/{targetSetsCount} เซ็ต
                     </span>
                   </div>
                 </div>
@@ -944,6 +936,64 @@ export default function Daily() {
                   </div>
                 )}
 
+                {sess.status === 'completed' ? (() => {
+                  const validSets = e.sets.filter(s => +s.reps > 0)
+                  const totalDone = validSets.reduce((sum, s) => sum + (+s.reps || 0), 0)
+                  const unit = isTimed ? 'วิ' : 'ครั้ง'
+                  const normKg = (s) => (s.kg !== '' && s.kg != null && +s.kg > 0) ? `${s.kg} kg` : 'BW'
+                  const firstKg = validSets[0] ? normKg(validSets[0]) : 'BW'
+                  const allSameReps = validSets.length > 1 && validSets.every(s => String(s.reps) === String(validSets[0].reps))
+                  const allSameKg = validSets.length > 0 && validSets.every(s => normKg(s) === firstKg)
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {validSets.length > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                            {allSameReps && allSameKg ? (
+                              <span style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                background: 'rgba(16, 185, 129, 0.14)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                color: 'var(--g-bright)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '4px 10px'
+                              }}>
+                                {validSets.length} เซ็ต × {validSets[0].reps} {unit} ({firstKg})
+                              </span>
+                            ) : (
+                              validSets.map((s, j) => {
+                                const repTxt = (s.repsLeft != null && s.repsRight != null && (s.repsLeft !== '' || s.repsRight !== ''))
+                                  ? `L${s.repsLeft || 0}/R${s.repsRight || 0}`
+                                  : s.reps
+                                return (
+                                  <span key={j} style={{
+                                    fontSize: 12.5,
+                                    background: 'var(--c2)',
+                                    border: '1px solid var(--ln)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    padding: '3px 9px'
+                                  }}>
+                                    <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {repTxt} {unit}
+                                    {!isBW && normKg(s) !== 'BW' ? ` · ${normKg(s)}` : ''}
+                                  </span>
+                                )
+                              })
+                            )}
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--g-bright)' }}>
+                            รวม {totalDone} {unit}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mut" style={{ fontSize: 12.5 }}>— ยังไม่ได้บันทึกเซ็ต</div>
+                      )}
+                      {e.note && <div className="mut" style={{ fontSize: 12.5 }}>📝 {e.note}</div>}
+                    </div>
+                  )
+                })() : (
+                  <>
                 {/* Set Cards - Mobile Friendly */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                   {e.sets.map((set, j) => {
@@ -1143,10 +1193,13 @@ export default function Daily() {
                 </button>
                 <button className="b s d" onClick={() => removeExercise(i)}>ลบ</button>
               </div>
+                  </>
+                )}
             </div>
           )
         })}
 
+          {sess.status !== 'completed' && (
           <div className="card">
             <h3 style={{ marginBottom: 12 }}>➕ เพิ่มท่าฝึกเพิ่มเติม</h3>
             <div className="row" style={{ margin: 0 }}>
@@ -1170,6 +1223,7 @@ export default function Daily() {
               onChange={ev => handleSessionNote(ev.target.value)}
             />
           </div>
+          )}
 
           <div className="card" style={{ background: 'var(--c2)' }}>
             <div className="sp" style={{ flexWrap: 'wrap', gap: 10 }}>
