@@ -10,6 +10,9 @@ export default function History() {
   const navigate = useNavigate()
   const [filterDate, setFilterDate] = useState('')
   const [filterMuscle, setFilterMuscle] = useState('')
+  const [expandedEx, setExpandedEx] = useState({})
+
+  const toggleExpand = (key) => setExpandedEx(prev => ({ ...prev, [key]: !prev[key] }))
 
   const sessions = [...S.sessions]
     .sort((a, b) => a.date < b.date ? 1 : -1)
@@ -243,43 +246,117 @@ export default function History() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {exercises.map((e, i) => {
                     const validSets = (e.sets || []).filter(x => +x.reps > 0)
+                    const exKey = `${s.id}-${i}`
+                    const isExpanded = !!expandedEx[exKey]
+
+                    const normKg = (x) => (x.kg !== '' && x.kg != null && +x.kg > 0) ? String(x.kg) : 'BW'
+                    const firstReps = validSets[0]?.reps
+                    const firstKg = validSets[0] ? normKg(validSets[0]) : 'BW'
+                    const allSameReps = validSets.length > 0 && validSets.every(x => String(x.reps) === String(firstReps))
+                    const allSameKg = validSets.length > 0 && validSets.every(x => normKg(x) === firstKg)
+                    const exTotalReps = validSets.reduce((sum, x) => sum + (+x.reps || 0), 0)
+
                     return (
-                      <div key={i} className="ex-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, padding: '10px 12px' }}>
-                        <div className="sp" style={{ width: '100%', gap: 6 }}>
-                          <span style={{ fontWeight: 600, fontSize: 14.5 }}>{e.name}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            {e.targetSets > 0 && (
-                              <span style={{ fontSize: 11, color: validSets.length >= e.targetSets ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
-                                {validSets.length}/{e.targetSets} เซ็ต
+                      <div key={i} className="ex-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6, padding: '10px 12px' }}>
+                        <div className="sp" style={{ width: '100%', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
+                            <span style={{ fontWeight: 600, fontSize: 14.5 }}>{e.name}</span>
+                            {validSets.length > 0 && allSameKg && (
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: firstKg === 'BW' ? 'var(--mt)' : 'var(--g-bright)',
+                                background: 'var(--c)',
+                                border: '1px solid var(--ln)',
+                                padding: '1px 7px',
+                                borderRadius: 99
+                              }}>
+                                {firstKg === 'BW' ? 'BW' : `${firstKg} kg`}
                               </span>
                             )}
-                            <span className="bd" style={{ background: 'var(--c)', fontSize: 11 }}>{e.muscle}</span>
                           </div>
+                          <span className="bd" style={{ background: 'var(--c)', fontSize: 11, flexShrink: 0 }}>{e.muscle}</span>
                         </div>
 
                         {validSets.length > 0 ? (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {validSets.map((x, j) => {
-                              const hasKg = x.kg !== '' && x.kg != null && +x.kg > 0
-                              return (
-                                <span
-                                  key={j}
+                          allSameReps && allSameKg && validSets.length > 1 && !isExpanded ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{
+                                  fontSize: 12.5,
+                                  fontWeight: 700,
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                                  color: 'var(--g-bright)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  padding: '3px 9px'
+                                }}>
+                                  {validSets.length} เซ็ต × {firstReps} ครั้ง
+                                </span>
+                                <span className="mut" style={{ fontSize: 12 }}>
+                                  รวม {exTotalReps} ครั้ง
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleExpand(exKey)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--mt)',
+                                  fontSize: 11.5,
+                                  cursor: 'pointer',
+                                  padding: '2px 4px',
+                                  textDecoration: 'underline'
+                                }}
+                              >
+                                ดูรายเซ็ต ▾
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                                {validSets.map((x, j) => {
+                                  const kgLabel = normKg(x)
+                                  return (
+                                    <span
+                                      key={j}
+                                      style={{
+                                        fontSize: 12,
+                                        background: 'var(--c)',
+                                        border: '1px solid var(--ln)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        padding: '3px 8px',
+                                        color: 'var(--tx)',
+                                        fontVariantNumeric: 'tabular-nums'
+                                      }}
+                                    >
+                                      <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {x.reps}
+                                      {!allSameKg && (kgLabel === 'BW' ? ' (BW)' : ` × ${kgLabel}kg`)}
+                                      {x.rpe ? <span className="mut"> · RPE {x.rpe}</span> : null}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                              {isExpanded && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpand(exKey)}
                                   style={{
-                                    fontSize: 12,
-                                    background: 'var(--c)',
-                                    border: '1px solid var(--ln)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    padding: '3px 8px',
-                                    color: 'var(--tx)',
-                                    fontVariantNumeric: 'tabular-nums'
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--mt)',
+                                    fontSize: 11.5,
+                                    cursor: 'pointer',
+                                    padding: '4px 0 0',
+                                    textDecoration: 'underline'
                                   }}
                                 >
-                                  <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {x.reps} ครั้ง{hasKg ? ` × ${x.kg}kg` : ' (BW)'}
-                                  {x.rpe ? <span className="mut"> · RPE {x.rpe}</span> : null}
-                                </span>
-                              )
-                            })}
-                          </div>
+                                  ย่อรายเซ็ต ▴
+                                </button>
+                              )}
+                            </div>
+                          )
                         ) : (
                           <div className="mut" style={{ fontSize: 12.5 }}>— ยังไม่ได้บันทึกเซ็ต</div>
                         )}
