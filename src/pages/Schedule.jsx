@@ -158,6 +158,22 @@ export default function Schedule() {
     toast('อัปเดตเป็นโปรแกรม Lean V-Taper 4 วันเรียบร้อย ✓')
   }
 
+  const detectActiveProgram = () => {
+    const days = S.plan?.days || []
+    const mon = days[0]?.name || ''
+    const tue = days[1]?.name || ''
+    const thu = days[3]?.name || ''
+    if (mon.includes('Upper A (อก, หลัง, ไหล่, แขน)') && tue.includes('Lower A')) return 'lean4'
+    if (mon.includes('Upper A (อกเน้นๆ') && thu.includes('Upper C')) return 'focus'
+    return 'custom'
+  }
+  const activeProgram = detectActiveProgram()
+  const activeLabel = activeProgram === 'lean4'
+    ? '✨ โปรแกรม Lean V-Taper 4 วัน (ใหม่)'
+    : activeProgram === 'focus'
+    ? '🔥 ตารางเน้น ไหล่ - อก - แขน'
+    : '🛠️ กำหนดเอง (Custom)'
+
   const buildScheduleExportText = () => {
     const muscleVolume = {}
     let workoutDaysCount = 0
@@ -270,19 +286,38 @@ export default function Schedule() {
       }}>
         <div className="sp" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <b style={{ fontSize: 16, color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🎯</span> เทมเพลตโปรแกรมฝึกแนะนำ
-            </b>
-            <p className="mut" style={{ margin: '4px 0 0', fontSize: 13 }}>
-              คลิกเพื่อตั้งค่าตารางโปรแกรมตามเป้าหมายได้ในคลิกเดียว
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <b style={{ fontSize: 16, color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🎯</span> เทมเพลตโปรแกรมฝึก
+              </b>
+              <span className="bd" style={{
+                background: activeProgram === 'custom' ? 'rgba(56, 189, 248, 0.16)' : 'rgba(16, 185, 129, 0.18)',
+                color: activeProgram === 'custom' ? '#38bdf8' : 'var(--g-bright)',
+                border: activeProgram === 'custom' ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+                fontSize: 11.5,
+                fontWeight: 700
+              }}>
+                ● กำลังใช้: {activeLabel}
+              </span>
+            </div>
+            <p className="mut" style={{ margin: '5px 0 0', fontSize: 13 }}>
+              คลิกเพื่อสลับตารางโปรแกรมได้ในคลิกเดียว (ไม่กระทบประวัติการฝึกเดิม)
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="b p" onClick={applyVTaperFocusPlan} style={{ fontSize: 13 }}>
-              🔥 ตารางเน้น ไหล่ - อก - แขน
+            <button
+              className={`b ${activeProgram === 'lean4' ? 'p' : 's'}`}
+              onClick={applyStandardPlan}
+              style={{ fontSize: 13 }}
+            >
+              ✨ โปรแกรม Lean V-Taper 4 วัน (หลัก){activeProgram === 'lean4' ? ' ✓' : ''}
             </button>
-            <button className="b s" onClick={applyStandardPlan} style={{ fontSize: 13 }}>
-              ✨ โปรแกรม Lean V-Taper 4 วัน (ใหม่)
+            <button
+              className={`b ${activeProgram === 'focus' ? 'p' : 's'}`}
+              onClick={applyVTaperFocusPlan}
+              style={{ fontSize: 13 }}
+            >
+              🔥 ตารางเน้น ไหล่ - อก - แขน{activeProgram === 'focus' ? ' ✓' : ''}
             </button>
           </div>
         </div>
