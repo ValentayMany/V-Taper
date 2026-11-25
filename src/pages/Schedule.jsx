@@ -215,13 +215,108 @@ export default function Schedule() {
     toast('รีเซ็ตเป็นตารางมาตรฐานเรียบร้อย')
   }
 
+  const buildScheduleExportText = () => {
+    const muscleVolume = {}
+    let workoutDaysCount = 0
+    let totalSetsWeek = 0
+
+    const dayBlocks = S.plan.days.map((day, idx) => {
+      if (day.rest) {
+        return `### ${DN[idx]}\n- **สถานะ:** วันพักฟื้นฟู (${day.name || 'Rest Day'})`
+      }
+      workoutDaysCount++
+      const lines = (day.items || []).map((item, n) => {
+        const ex = exById(item.exId)
+        const name = ex?.name || 'ไม่ระบุชื่อท่า'
+        const muscle = ex?.muscle || '-'
+        const equip = ex?.equip || '-'
+        const sets = Number(item.sets) || 0
+        totalSetsWeek += sets
+        if (muscle && muscle !== '-') {
+          muscleVolume[muscle] = (muscleVolume[muscle] || 0) + sets
+        }
+        return `  ${n + 1}. **${name}** (${muscle} | ${equip}) — ${sets} เซ็ต × ${item.reps} ครั้ง · พัก ${item.rest} วินาที`
+      })
+      return `### ${DN[idx]} — ${day.name}\n${lines.length > 0 ? lines.join('\n') : '  - (ยังไม่มีท่าฝึก)'}`
+    })
+
+    const volumeLines = Object.entries(muscleVolume)
+      .sort((a, b) => b[1] - a[1])
+      .map(([m, s]) => `- **${m}:** ${s} เซ็ต/สัปดาห์`)
+
+    return [
+      `# ตารางฝึกประจำสัปดาห์ (My Lean V-Taper Tracker)`,
+      `- **บริบทอุปกรณ์:** ฝึกที่บ้าน (ดัมเบลข้างละ 5 kg + บอร์ดวิดพื้น)`,
+      `- **วันฝึก:** ${workoutDaysCount} วัน/สัปดาห์ (พัก ${7 - workoutDaysCount} วัน) · **ปริมาณรวม:** ${totalSetsWeek} เซ็ต/สัปดาห์`,
+      ``,
+      `## ปริมาณเซ็ตต่อกลุ่มกล้ามเนื้อ (Weekly Volume)`,
+      volumeLines.length > 0 ? volumeLines.join('\n') : '- ยังไม่มีข้อมูล',
+      ``,
+      `## รายละเอียดตารางฝึก 7 วัน`,
+      dayBlocks.join('\n\n'),
+      ``,
+      `---`,
+      `ช่วยวิเคราะห์ตารางฝึกนี้ให้หน่อยครับว่า:`,
+      `1. ปริมาณเซ็ตต่อกลุ่มกล้ามเนื้อและความถี่ต่อสัปดาห์เหมาะสมไหม (เทียบกับอุปกรณ์ดัมเบล 5 kg + บอร์ดวิดพื้น)?`,
+      `2. จุดไหนควรเพิ่ม/ลด หรือจัดลำดับท่าใหม่เพื่อเน้นหุ่น V-Taper (ไหล่กว้าง อกชัด เอวคอด)?`,
+    ].join('\n')
+  }
+
+  const handleCopyScheduleForAI = async () => {
+    const text = buildScheduleExportText()
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('คัดลอกตารางสำหรับส่งให้ AI เรียบร้อยแล้ว ✓')
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      toast('คัดลอกตารางสำหรับส่งให้ AI เรียบร้อยแล้ว ✓')
+    }
+  }
+
+  const handleDownloadSchedule = () => {
+    const text = buildScheduleExportText()
+    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `vtaper-schedule-${new Date().toISOString().slice(0, 10)}.md`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast('ดาวน์โหลดไฟล์ตารางฝึก (.md) เรียบร้อยแล้ว ✓')
+  }
+
   return (
     <>
-      <div style={{ marginBottom: 20 }}>
-        <h1>🗓 Workout Schedule</h1>
-        <p className="mut" style={{ margin: 0, fontSize: 14 }}>
-          กำหนดตารางฝึกประจำสัปดาห์ (การแก้ไขตารางจะไม่กระทบประวัติการฝึกเดิมที่เคยบันทึกไว้)
-        </p>
+      <div className="sp" style={{ marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ marginBottom: 6 }}>🗓 Workout Schedule</h1>
+          <p className="mut" style={{ margin: 0, fontSize: 14 }}>
+            กำหนดตารางฝึกประจำสัปดาห์ (การแก้ไขตารางจะไม่กระทบประวัติการฝึกเดิมที่เคยบันทึกไว้)
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className="b s p"
+            onClick={handleCopyScheduleForAI}
+            title="คัดลอกตารางฝึกพร้อมสรุป Volume เพื่อวางส่งให้ AI วิเคราะห์"
+          >
+            📋 คัดลอกให้ AI วิเคราะห์
+          </button>
+          <button
+            className="b s"
+            onClick={handleDownloadSchedule}
+            title="ดาวน์โหลดตารางฝึกเป็นไฟล์ Markdown (.md)"
+          >
+            📥 Export ไฟล์
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{
