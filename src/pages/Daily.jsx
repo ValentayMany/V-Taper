@@ -225,25 +225,19 @@ export default function Daily() {
     if (validSets.length === 0) {
       if (prevRecord) {
         return {
-          type: 'target',
           icon: '🎯',
-          badge: 'เป้าหมายวันนี้',
+          badge: 'เป้าวันนี้',
           badgeBg: 'rgba(56, 189, 248, 0.15)',
           badgeColor: '#38bdf8',
-          title: `สถิติเดิม ${prevRecord.bestReps} ครั้ง · ตั้งเป้าท้าทาย ${prevRecord.bestReps + 1}+ ครั้ง`,
-          text: `ครั้งก่อนทำได้ดีที่สุด ${prevRecord.bestReps} ครั้ง (${prevRecord.summary}) วันนี้พยายามรักษาฟอร์มให้นิ่ง คุมจังหวะลง 2-3 วินาที และดันให้ถึง ${prevRecord.bestReps + 1} ครั้ง`,
-          action: 'คำแนะนำ: ค่อยๆ เพิ่มทีละ 1 ครั้งโดยไม่เสียฟอร์ม'
+          shortText: `ครั้งก่อนสูงสุด ${prevRecord.bestReps} ครั้ง — วันนี้ลองดันให้ถึง ${prevRecord.bestReps + 1}+ ครั้ง`
         }
       }
       return {
-        type: 'baseline',
         icon: '🌱',
-        badge: 'สร้างสถิติเริ่มต้น',
+        badge: 'ครั้งแรก',
         badgeBg: 'rgba(16, 185, 129, 0.15)',
         badgeColor: '#34d399',
-        title: `เป้าหมายตาราง: ${targetSets} เซ็ต × ${targetReps} ครั้ง`,
-        text: `บันทึกครั้งแรกสำหรับท่านี้ โฟกัสฟอร์มการเล่นที่ถูกต้องและสม่ำเสมอ บันทึกจำนวนครั้งที่ทำไหวจริงเพื่อใช้เป็นฐานวิเคราะห์ครั้งถัดไป`,
-        action: 'คำแนะนำ: ยังไม่ต้องรีบยกหนัก เน้นคุมข้อต่อและกล้ามเนื้อเป้าหมาย'
+        shortText: `โฟกัสฟอร์มที่ถูกต้อง แล้วบันทึกจำนวนครั้งที่ทำไหว`
       }
     }
 
@@ -251,44 +245,32 @@ export default function Daily() {
     const bestReps = Math.max(...validSets.map(s => +s.reps))
     const avgReps = (validSets.reduce((sum, s) => sum + (+s.reps), 0) / validSets.length).toFixed(1)
 
-    // Check if reps dropped compared to previous session
-    if (prevRecord && prevRecord.bestReps > 0) {
-      if (bestReps < prevRecord.bestReps && validSets.length >= 2) {
-        return {
-          type: 'recovery',
-          icon: '🛌',
-          badge: 'ประเมินการฟื้นฟู',
-          badgeBg: 'rgba(245, 158, 11, 0.15)',
-          badgeColor: '#fbbf24',
-          title: `จำนวนครั้งลดลงเล็กน้อย (${bestReps} เทียบกับเดิม ${prevRecord.bestReps} ครั้ง)`,
-          text: `สถิติวันนี้ลดลงจากครั้งก่อน อาจเกิดจากกล้ามเนื้อล้า การนอนหลับ หรือพลังงานสะสม แนะนำให้รักษาฟอร์มให้สะอาด พักผ่อนให้เต็มที่ และไม่ต้องเร่งฝืนเพิ่มน้ำหนัก`,
-          action: 'คำแนะนำ: รักษาระดับเดิม และประเมินการพักผ่อน 7-8 ชม.'
-        }
+    if (prevRecord && prevRecord.bestReps > 0 && bestReps < prevRecord.bestReps && validSets.length >= 2) {
+      return {
+        icon: '🛌',
+        badge: 'เน้นฟื้นฟู',
+        badgeBg: 'rgba(245, 158, 11, 0.15)',
+        badgeColor: '#fbbf24',
+        shortText: `ลดลงจากเดิม (${bestReps} vs ${prevRecord.bestReps}) — คงน้ำหนักเดิม เน้นฟอร์มและพักผ่อนให้พอ`
       }
     }
 
     if (allMetTarget) {
       return {
-        type: 'overload',
         icon: '🔥',
-        badge: 'พร้อมก้าวหน้า (Progressive Overload)',
+        badge: 'พร้อมพัฒนา',
         badgeBg: 'rgba(16, 185, 129, 0.18)',
         badgeColor: '#34d399',
-        title: `ผ่านเกณฑ์เป้าหมายครบทุกเซ็ต! (${validSets.length}/${targetSets} เซ็ต ≥ ${targetReps} ครั้ง)`,
-        text: `คุณควบคุมท่าได้ยอดเยี่ยมและทำถึงเป้าหมายครบทุกเซ็ต ในครั้งถัดไปแนะนำเพิ่มความท้าทายด้วยการเพิ่มจำนวนครั้ง +1-2 ครั้ง หรือใช้เทคนิค Pause Tempo (ค้างเกร็งที่จุดสูงสุด 2 วินาที)`,
-        action: 'คำแนะนำครั้งถัดไป: เพิ่มเป้าหมายเป็น ' + (targetReps + 1) + '-' + (targetReps + 2) + ' ครั้ง หรือเพิ่มมุมความยาก'
+        shortText: `ครบเป้าทุกเซ็ต! ครั้งหน้าลองเพิ่มเป็น ${targetReps + 1}-${targetReps + 2} ครั้ง หรือค้างเกร็ง 2 วิ`
       }
     }
 
     return {
-      type: 'progressing',
       icon: '📈',
-      badge: 'สะสมความแข็งแรง',
+      badge: 'สะสมแรง',
       badgeBg: 'rgba(56, 189, 248, 0.15)',
       badgeColor: '#38bdf8',
-      title: `ทำได้เฉลี่ย ${avgReps} ครั้ง (เป้าหมาย ${targetReps} ครั้ง)`,
-      text: `ยังอยู่ในช่วงพัฒนาความแข็งแรง ให้รักษาน้ำหนักเดิมและพยายามสะสมจำนวนครั้งในแต่ละเซ็ตให้ขยับเข้าใกล้เป้าหมาย ${targetReps} ครั้งทีละเซ็ต`,
-      action: 'คำแนะนำครั้งถัดไป: รักษาน้ำหนักเดิม พยายามดันเซ็ตถัดไปให้ได้อีก +1 ครั้ง'
+      shortText: `เฉลี่ย ${avgReps}/${targetReps} ครั้ง — คงน้ำหนักเดิม ค่อยๆ เพิ่มทีละ 1 ครั้ง`
     }
   }
 
@@ -818,37 +800,27 @@ export default function Daily() {
                   </div>
                 </div>
 
-                {/* Previous Record Compact */}
-                {prevRecord ? (
+                {/* Previous Record - Single Line Compact */}
+                {prevRecord && (
                   <div style={{
                     background: 'rgba(56, 189, 248, 0.08)',
                     border: '1px solid rgba(56, 189, 248, 0.2)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '7px 10px',
+                    padding: '6px 10px',
                     marginBottom: 10,
                     fontSize: 12,
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 3
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 6
                   }}>
-                    <div style={{ color: 'var(--b)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span>📜</span> <b>ครั้งก่อน ({prevRecord.date}):</b> {prevRecord.summary}
-                    </div>
-                    <div style={{ color: 'var(--g-bright)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      🔥 เป้า: {prevRecord.targetReps}+ ครั้ง
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--ln)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '5px 10px',
-                    marginBottom: 10,
-                    fontSize: 12,
-                    color: 'var(--mt)'
-                  }}>
-                    🌱 บันทึกครั้งแรก — ใส่จำนวนครั้งที่ทำไหวได้เลย!
+                    <span style={{ color: 'var(--b)' }}>
+                      📜 ล่าสุด: <b>{prevRecord.sets.map(st => st.reps).join(', ')}</b>
+                    </span>
+                    <span style={{ color: 'var(--g-bright)', fontWeight: 700 }}>
+                      🔥 เป้า: {prevRecord.targetReps}+
+                    </span>
                   </div>
                 )}
 
@@ -1007,37 +979,34 @@ export default function Daily() {
                   })}
                 </div>
 
-                {/* Next Workout Recommendation */}
+                {/* Next Workout Recommendation - Compact */}
                 {nextRec && (
                   <div style={{
                     background: 'rgba(18, 24, 32, 0.65)',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '9px 12px',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '7px 10px',
                     marginBottom: 10,
+                    fontSize: 12,
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4
+                    alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14 }}>{nextRec.icon}</span>
-                      <span style={{
-                        background: nextRec.badgeBg,
-                        color: nextRec.badgeColor,
-                        fontWeight: 700,
-                        fontSize: 10.5,
-                        padding: '2px 7px',
-                        borderRadius: 99
-                      }}>
-                        {nextRec.badge}
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--tx2)', lineHeight: 1.4 }}>
-                      {nextRec.text}
-                    </p>
-                    <div style={{ fontSize: 11.5, color: 'var(--g-bright)', fontWeight: 600 }}>
-                      💡 {nextRec.action}
-                    </div>
+                    <span style={{
+                      background: nextRec.badgeBg,
+                      color: nextRec.badgeColor,
+                      fontWeight: 700,
+                      fontSize: 11,
+                      padding: '2px 7px',
+                      borderRadius: 99,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {nextRec.icon} {nextRec.badge}
+                    </span>
+                    <span style={{ color: 'var(--tx2)', lineHeight: 1.35, flex: 1, minWidth: 180 }}>
+                      {nextRec.shortText}
+                    </span>
                   </div>
                 )}
 
