@@ -639,6 +639,17 @@ tr:last-child td {
   }
 }
 
+/* Set Card Input Grid (Desktop: 4 columns in 1 sleek row) */
+.set-input-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.set-card input.n {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Mobile Bottom Nav */
 #bnav {
   display: none;
@@ -718,7 +729,11 @@ tr:last-child td {
     padding: 4px 10px;
   }
 
-  /* Daily set card input fields – full width on mobile */
+  /* Daily set card input fields – 2x2 grid & full width on mobile */
+  .set-input-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
   .set-card input.n {
     width: 100% !important;
     box-sizing: border-box;

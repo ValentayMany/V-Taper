@@ -918,8 +918,8 @@ export default function Daily() {
                           </div>
                         </div>
 
-                        {/* Input Grid — 2 columns × 2 rows */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {/* Input Grid — 4 cols on desktop, 2x2 on mobile */}
+                        <div className="set-input-grid">
                           <div>
                             <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
                               ทำได้จริง (ครั้ง)
