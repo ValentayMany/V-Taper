@@ -108,8 +108,36 @@ export async function seedToSupabase() {
   return await loadFromSupabase()
 }
 
-// ── Synchronize full in-memory store state to Supabase ──
+// ── Synchronize full in-memory store state to Supabase (serialized to prevent duplicate sets) ──
+let isSyncing = false
+let pendingSyncState = null
+let pendingSyncPromise = null
+
 export async function syncStoreToSupabase(s) {
+  if (!s) return
+  pendingSyncState = JSON.parse(JSON.stringify(s))
+  if (isSyncing) {
+    return pendingSyncPromise
+  }
+
+  isSyncing = true
+  pendingSyncPromise = (async () => {
+    try {
+      while (pendingSyncState) {
+        const current = pendingSyncState
+        pendingSyncState = null
+        await performSyncToSupabase(current)
+      }
+    } finally {
+      isSyncing = false
+      pendingSyncPromise = null
+    }
+  })()
+
+  return pendingSyncPromise
+}
+
+async function performSyncToSupabase(s) {
   if (!s) return
 
   // 1. Sync body_measurements (Upsert active + Delete removed)
