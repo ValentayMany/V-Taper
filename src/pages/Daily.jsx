@@ -112,6 +112,13 @@ const getHomeGuide = (name = '') => {
   return null
 }
 
+const isBodyweightExercise = (name = '') => {
+  const n = name.toLowerCase()
+  return n.includes('push-up') || n.includes('pushup') || n.includes('plank') || n.includes('bodyweight') || n.includes('dip') || n.includes('pull-up') || n.includes('chin-up')
+}
+
+const getDefaultKg = (name = '') => isBodyweightExercise(name) ? '0' : '5'
+
 export default function Daily() {
   const { date: paramDate } = useParams()
   const navigate = useNavigate()
@@ -316,6 +323,7 @@ export default function Daily() {
         startedAt: Date.now(),
         exercises: displayPlan.rest ? [] : displayPlan.items.map(item => {
           const e = exById(item.exId) || { name: '?', muscle: '-' }
+          const defKg = getDefaultKg(e.name)
           return {
             exId: item.exId,
             name: e.name,
@@ -325,7 +333,7 @@ export default function Daily() {
             rest: item.rest,
             done: false,
             note: '',
-            sets: [{ reps: '', kg: '', rest: item.rest, rpe: '', done: false }],
+            sets: [{ reps: '', kg: defKg, rest: item.rest, rpe: '', done: false }],
           }
         }),
       })
@@ -365,6 +373,7 @@ export default function Daily() {
       cur.note = cur.note ? `${cur.note} | ดึงท่าจาก ${target.name}` : `ดึงท่าจากโปรแกรม ${target.name}`
       cur.exercises = target.items.map(item => {
         const e = exById(item.exId) || { name: '?', muscle: '-' }
+        const defKg = getDefaultKg(e.name)
         return {
           exId: item.exId,
           name: e.name,
@@ -374,7 +383,7 @@ export default function Daily() {
           rest: item.rest,
           done: false,
           note: '',
-          sets: [{ reps: '', kg: '', rest: item.rest, rpe: '', done: false }],
+          sets: [{ reps: '', kg: defKg, rest: item.rest, rpe: '', done: false }],
         }
       })
     })
@@ -397,7 +406,7 @@ export default function Daily() {
       const ss = s.sessions.find(x => x.date === d)
       const e = ss.exercises[i]
       const prev = e.sets[e.sets.length - 1]
-      e.sets.push({ reps: '', kg: prev ? prev.kg : '', rest: e.rest, rpe: '', done: false })
+      e.sets.push({ reps: '', kg: prev ? prev.kg : getDefaultKg(e.name), rest: e.rest, rpe: '', done: false })
     }, true)
   }
 
@@ -454,6 +463,7 @@ export default function Daily() {
     update(s => {
       const currentSession = s.sessions.find(x => x.date === d)
       if (!currentSession) return
+      const defKg = getDefaultKg(targetEx.name)
       currentSession.exercises.push({
         exId: targetEx.id,
         name: targetEx.name,
@@ -463,7 +473,7 @@ export default function Daily() {
         rest: targetEx.rest,
         done: false,
         note: '',
-        sets: [{ reps: '', kg: '', rest: targetEx.rest, rpe: '', done: false }],
+        sets: [{ reps: '', kg: defKg, rest: targetEx.rest, rpe: '', done: false }],
       })
     }, true)
   }
@@ -768,71 +778,64 @@ export default function Daily() {
             const prevRecord = getPrevExerciseRecord(e.exId, e.name)
             const homeGuide = getHomeGuide(e.name)
             const nextRec = getNextWorkoutRecommendation(e, prevRecord)
-            const isBodyweight = e.name?.toLowerCase().includes('push-up') || e.name?.toLowerCase().includes('plank') || e.name?.toLowerCase().includes('bodyweight')
+            const isBW = isBodyweightExercise(e.name)
             const doneSetsCount = e.sets.filter(s => s.done || +s.reps > 0).length
             const targetSetsCount = e.targetSets || e.sets.length || 3
             const progressPercent = Math.min(100, Math.round((doneSetsCount / targetSetsCount) * 100))
 
             return (
               <div key={i} className={`card ${e.done ? 'dn' : ''}`} style={{ borderColor: e.done ? 'var(--g2)' : undefined }}>
-                <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <b style={{ fontSize: 17 }}>{e.name}</b>
-                      <span className="bd" style={{ background: 'var(--c2)', fontSize: 11 }}>{e.muscle}</span>
-                      {isBodyweight && (
-                        <span className="bd" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: 11 }}>
-                          บอดี้เวท (BW)
-                        </span>
-                      )}
+                {/* Exercise Header */}
+                <div style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <b style={{ fontSize: 16 }}>{e.name}</b>
+                        <span className="bd" style={{ background: 'var(--c2)', fontSize: 10.5 }}>{e.muscle}</span>
+                        {isBW && (
+                          <span className="bd" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: 10.5 }}>BW</span>
+                        )}
+                      </div>
+                      <div className="mut" style={{ fontSize: 12.5, marginTop: 3 }}>
+                        {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest}วิ
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
-                      <span className="mut" style={{ fontSize: 13 }}>
-                        เป้าหมาย {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest} วินาที
-                      </span>
-                      <span style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: doneSetsCount >= targetSetsCount ? 'var(--g-bright)' : 'var(--b)',
-                        background: doneSetsCount >= targetSetsCount ? 'var(--g-bg)' : 'var(--b-bg)',
-                        padding: '2px 8px',
-                        borderRadius: 99
-                      }}>
-                        🎯 ความคืบหน้า: {doneSetsCount}/{targetSetsCount} เซ็ต ({progressPercent}%)
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <button className="b s" onClick={() => setActiveTimerSeconds(e.rest || 60)} style={{ padding: '6px 10px', fontSize: 12 }}>
+                        ⏱ {e.rest || 60}s
+                      </button>
+                      {e.done && <span className="bd completed" style={{ fontSize: 11 }}>✓</span>}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      className="b s"
-                      onClick={() => setActiveTimerSeconds(e.rest || 60)}
-                      title="เริ่มนับเวลาพักของท่านี้"
-                    >
-                      ⏱️ พัก {e.rest || 60}s
-                    </button>
-                    {e.done && <span className="bd completed">✓ เสร็จแล้ว</span>}
+                  {/* Progress bar */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <div style={{ flex: 1, height: 6, background: 'var(--c2)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ width: `${progressPercent}%`, height: '100%', background: doneSetsCount >= targetSetsCount ? 'var(--g)' : 'var(--b)', borderRadius: 99, transition: 'width 0.3s ease' }} />
+                    </div>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: doneSetsCount >= targetSetsCount ? 'var(--g-bright)' : 'var(--b)', whiteSpace: 'nowrap' }}>
+                      {doneSetsCount}/{targetSetsCount} เซ็ต
+                    </span>
                   </div>
                 </div>
 
-                {/* Overload / Previous Record Indicator */}
+                {/* Previous Record Compact */}
                 {prevRecord ? (
                   <div style={{
                     background: 'rgba(56, 189, 248, 0.08)',
-                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                    border: '1px solid rgba(56, 189, 248, 0.2)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '8px 12px',
-                    marginBottom: 12,
+                    padding: '7px 10px',
+                    marginBottom: 10,
+                    fontSize: 12,
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 8
+                    flexDirection: 'column',
+                    gap: 3
                   }}>
-                    <div style={{ fontSize: 12, color: 'var(--b)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>📜</span> <b>สถิติล่าสุด ({prevRecord.date}):</b> {prevRecord.summary}
+                    <div style={{ color: 'var(--b)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>📜</span> <b>ครั้งก่อน ({prevRecord.date}):</b> {prevRecord.summary}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--g-bright)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span>🔥</span> เป้าหมายวันนี้: ท้าทายให้ได้ {prevRecord.targetReps}+ ครั้ง!
+                    <div style={{ color: 'var(--g-bright)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      🔥 เป้า: {prevRecord.targetReps}+ ครั้ง
                     </div>
                   </div>
                 ) : (
@@ -840,220 +843,217 @@ export default function Daily() {
                     background: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid var(--ln)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '6px 10px',
-                    marginBottom: 12,
+                    padding: '5px 10px',
+                    marginBottom: 10,
                     fontSize: 12,
                     color: 'var(--mt)'
                   }}>
-                    🌱 บันทึกครั้งแรกสำหรับท่านี้ — ใส่จำนวนครั้งที่ทำไหวได้เลย!
+                    🌱 บันทึกครั้งแรก — ใส่จำนวนครั้งที่ทำไหวได้เลย!
                   </div>
                 )}
 
-                {/* Home Workout & Push-up Board Guide */}
+                {/* Home Workout Guide (collapsed) */}
                 {homeGuide && (
                   <div style={{
                     background: 'rgba(16, 185, 129, 0.06)',
                     border: '1px solid rgba(16, 185, 129, 0.2)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '9px 12px',
-                    marginBottom: 12,
-                    fontSize: 12
+                    padding: '7px 10px',
+                    marginBottom: 10,
+                    fontSize: 11.5
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{
                         background: homeGuide.badgeBg,
                         color: homeGuide.badgeColor,
                         fontWeight: 700,
-                        padding: '2px 8px',
+                        padding: '2px 7px',
                         borderRadius: 99,
-                        fontSize: 11
+                        fontSize: 10.5
                       }}>
                         {homeGuide.badgeText}
                       </span>
-                      <b style={{ color: 'var(--tx)' }}>{homeGuide.title}</b>
+                      <span style={{ color: 'var(--mt)', fontSize: 11.5 }}>{homeGuide.tip}</span>
                     </div>
-                    <div className="mut" style={{ lineHeight: 1.45 }}>
-                      {homeGuide.tip}
-                    </div>
-                    {homeGuide.proTip && (
-                      <div style={{ color: 'var(--g-bright)', marginTop: 4, fontWeight: 500 }}>
-                        {homeGuide.proTip}
-                      </div>
-                    )}
                   </div>
                 )}
 
-                <div style={{ overflowX: 'auto', marginBottom: 10 }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 44, textAlign: 'center' }}>เซ็ต</th>
-                        <th style={{ minWidth: 65, textAlign: 'center' }}>เป้าหมาย</th>
-                        <th style={{ minWidth: 80 }}>ทำได้จริง</th>
-                        <th style={{ minWidth: 80 }}>น้ำหนัก (กก.)</th>
-                        <th style={{ minWidth: 70 }}>พัก (วิ)</th>
-                        <th style={{ minWidth: 65 }}>RPE</th>
-                        <th style={{ width: 75, textAlign: 'center' }}>สถานะ</th>
-                        <th style={{ width: 36 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {e.sets.map((set, j) => {
-                        const prevSet = prevRecord?.sets[j]
-                        return (
-                          <tr key={j} style={{
-                            background: set.done ? 'rgba(16, 185, 129, 0.08)' : undefined,
-                            transition: 'background 0.2s ease'
-                          }}>
-                            <td style={{ fontWeight: 700, color: 'var(--g-bright)', textAlign: 'center' }}>
-                              {j + 1}
-                            </td>
-                            <td style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--mt)', fontWeight: 600 }}>
-                              {e.targetReps} ครั้ง
-                            </td>
-                            <td>
-                              <input
-                                className="n" type="number"
-                                step="1"
-                                value={set.reps}
-                                placeholder={prevSet ? String(prevSet.reps) : String(e.targetReps)}
-                                onChange={ev => handleSetField(i, j, 'reps', ev.target.value)}
-                              />
-                              {prevRecord && set.reps && +set.reps > prevRecord.bestReps ? (
-                                <div style={{
-                                  fontSize: 10,
-                                  color: '#fbbf24',
-                                  fontWeight: 800,
-                                  marginTop: 2,
-                                  textAlign: 'center',
-                                  background: 'rgba(245, 158, 11, 0.18)',
-                                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                                  borderRadius: 4,
-                                  padding: '1px 3px'
-                                }}>
-                                  🏆 PR! (+{+set.reps - prevRecord.bestReps})
-                                </div>
-                              ) : prevSet ? (
-                                <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
-                                  เดิม: {prevSet.reps}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td>
-                              <input
-                                className="n" type="number"
-                                step="0.5"
-                                value={set.kg}
-                                placeholder={isBodyweight ? 'BW' : (prevSet && prevSet.kg ? String(prevSet.kg) : '5')}
-                                onChange={ev => handleSetField(i, j, 'kg', ev.target.value)}
-                              />
-                              {isBodyweight && !set.kg && (
-                                <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
-                                  น้ำหนักตัว
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <input
-                                className="n" type="number"
-                                step="5"
-                                value={set.rest}
-                                placeholder={String(e.rest || 60)}
-                                onChange={ev => handleSetField(i, j, 'rest', ev.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                className="n" type="number"
-                                step="1"
-                                min="1"
-                                max="10"
-                                value={set.rpe}
-                                placeholder="1-10"
-                                onChange={ev => handleSetField(i, j, 'rpe', ev.target.value)}
-                              />
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                className={`b s ${set.done ? 'p' : ''}`}
-                                style={{
-                                  padding: '5px 8px',
-                                  fontSize: 11.5,
-                                  fontWeight: 700,
-                                  whiteSpace: 'nowrap',
-                                  minHeight: 28,
-                                  background: set.done ? 'var(--g)' : 'rgba(255, 255, 255, 0.05)',
-                                  color: set.done ? '#032011' : 'var(--mt)',
-                                  border: set.done ? 'none' : '1px solid var(--ln)'
-                                }}
-                                onClick={() => handleToggleSetDone(i, j)}
-                                title={set.done ? 'กดเพื่อยกเลิกสถานะเสร็จ' : 'กดเพื่อบันทึกเซ็ตนี้และเริ่มพัก'}
-                              >
-                                {set.done ? '✓ เสร็จ' : '○ บันทึก'}
-                              </button>
-                            </td>
-                            <td>
-                              <button className="b s d" onClick={() => deleteSet(i, j)} title="ลบเซ็ตนี้">✕</button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                {/* Set Cards - Mobile Friendly */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                  {e.sets.map((set, j) => {
+                    const prevSet = prevRecord?.sets[j]
+                    return (
+                      <div key={j} className="set-card" style={{
+                        background: set.done ? 'rgba(16, 185, 129, 0.1)' : 'var(--c2)',
+                        border: set.done ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--ln)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '10px 12px',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        {/* Set Header Row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{
+                              background: set.done ? 'var(--g)' : 'rgba(16, 185, 129, 0.15)',
+                              color: set.done ? '#032011' : 'var(--g-bright)',
+                              fontWeight: 800,
+                              fontSize: 12,
+                              width: 28,
+                              height: 28,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 99
+                            }}>
+                              {set.done ? '✓' : j + 1}
+                            </span>
+                            <span style={{ fontSize: 12, color: 'var(--mt)' }}>
+                              เป้า: <b style={{ color: 'var(--tx)' }}>{e.targetReps} ครั้ง</b>
+                            </span>
+                            {prevRecord && set.reps && +set.reps > prevRecord.bestReps && (
+                              <span style={{
+                                fontSize: 10.5,
+                                color: '#fbbf24',
+                                fontWeight: 800,
+                                background: 'rgba(245, 158, 11, 0.18)',
+                                border: '1px solid rgba(245, 158, 11, 0.4)',
+                                borderRadius: 4,
+                                padding: '1px 6px'
+                              }}>
+                                🏆 PR! (+{+set.reps - prevRecord.bestReps})
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 5 }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSetDone(i, j)}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                borderRadius: 'var(--radius-sm)',
+                                border: set.done ? 'none' : '1px solid var(--ln)',
+                                background: set.done ? 'var(--g)' : 'rgba(255, 255, 255, 0.05)',
+                                color: set.done ? '#032011' : 'var(--mt)',
+                                cursor: 'pointer',
+                                minHeight: 30
+                              }}
+                            >
+                              {set.done ? '✓ เสร็จ' : '○ บันทึก'}
+                            </button>
+                            <button className="b s d" onClick={() => deleteSet(i, j)} style={{ padding: '5px 8px', fontSize: 12, minHeight: 30 }}>✕</button>
+                          </div>
+                        </div>
+
+                        {/* Input Grid — 2 columns × 2 rows */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <div>
+                            <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                              ทำได้จริง (ครั้ง)
+                            </label>
+                            <input
+                              className="n" type="number" step="1"
+                              value={set.reps}
+                              placeholder={prevSet ? String(prevSet.reps) : String(e.targetReps)}
+                              onChange={ev => handleSetField(i, j, 'reps', ev.target.value)}
+                              style={{ width: '100%' }}
+                            />
+                            {prevSet && !set.reps && (
+                              <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2 }}>
+                                เดิม: {prevSet.reps}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                              {isBW ? 'น้ำหนัก (BW)' : 'น้ำหนัก (กก.)'}
+                            </label>
+                            <input
+                              className="n" type="number" step="0.5"
+                              value={set.kg}
+                              placeholder={isBW ? '0' : '5'}
+                              onChange={ev => handleSetField(i, j, 'kg', ev.target.value)}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                              พัก (วินาที)
+                            </label>
+                            <input
+                              className="n" type="number" step="5"
+                              value={set.rest}
+                              placeholder={String(e.rest || 60)}
+                              onChange={ev => handleSetField(i, j, 'rest', ev.target.value)}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10.5, color: 'var(--mt)', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                              RPE (1-10)
+                            </label>
+                            <input
+                              className="n" type="number" step="1" min="1" max="10"
+                              value={set.rpe}
+                              placeholder="—"
+                              onChange={ev => handleSetField(i, j, 'rpe', ev.target.value)}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
 
-                {/* Next Workout Recommendation Card */}
+                {/* Next Workout Recommendation */}
                 {nextRec && (
                   <div style={{
                     background: 'rgba(18, 24, 32, 0.65)',
                     border: '1px solid rgba(16, 185, 129, 0.25)',
                     borderRadius: 'var(--radius-md)',
-                    padding: '10px 14px',
-                    marginTop: 10,
+                    padding: '9px 12px',
                     marginBottom: 10,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 6
+                    gap: 4
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 16 }}>{nextRec.icon}</span>
-                        <b style={{ fontSize: 13, color: 'var(--tx)' }}>{nextRec.title}</b>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14 }}>{nextRec.icon}</span>
                       <span style={{
                         background: nextRec.badgeBg,
                         color: nextRec.badgeColor,
                         fontWeight: 700,
-                        fontSize: 11,
-                        padding: '2px 8px',
+                        fontSize: 10.5,
+                        padding: '2px 7px',
                         borderRadius: 99
                       }}>
                         {nextRec.badge}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.45 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--tx2)', lineHeight: 1.4 }}>
                       {nextRec.text}
                     </p>
-                    <div style={{ fontSize: 12, color: 'var(--g-bright)', fontWeight: 600 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--g-bright)', fontWeight: 600 }}>
                       💡 {nextRec.action}
                     </div>
                   </div>
                 )}
 
               <input
-                style={{ width: '100%', marginTop: 12 }}
-                placeholder="📝 บันทึกหรือข้อความเพิ่มเติมสำหรับท่านี้..."
+                style={{ width: '100%', marginTop: 6 }}
+                placeholder="📝 หมายเหตุสำหรับท่านี้..."
                 value={e.note}
                 onChange={ev => handleExNote(i, ev.target.value)}
               />
 
-              <div className="row" style={{ marginTop: 14 }}>
-                <button className="b s" onClick={() => addSet(i)}>+ เพิ่มเซ็ต (Add Set)</button>
-                <button className={`b s ${e.done ? '' : 'p'}`} onClick={() => completeExercise(i)}>
-                  {e.done ? '↩ ยกเลิกเสร็จสิ้น' : '✓ เสร็จสิ้นท่านี้'}
+              <div className="row" style={{ marginTop: 10, gap: 6 }}>
+                <button className="b s" onClick={() => addSet(i)} style={{ flex: 1 }}>+ เพิ่มเซ็ต</button>
+                <button className={`b s ${e.done ? '' : 'p'}`} onClick={() => completeExercise(i)} style={{ flex: 1 }}>
+                  {e.done ? '↩ ยกเลิก' : '✓ เสร็จสิ้นท่านี้'}
                 </button>
-                <button className="b s d" onClick={() => removeExercise(i)}>ลบท่านี้</button>
+                <button className="b s d" onClick={() => removeExercise(i)}>ลบ</button>
               </div>
             </div>
           )

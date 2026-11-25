@@ -718,6 +718,15 @@ tr:last-child td {
     padding: 4px 10px;
   }
 
+  /* Daily set card input fields – full width on mobile */
+  .set-card input.n {
+    width: 100% !important;
+    box-sizing: border-box;
+    font-size: 16px !important;
+    font-weight: 700;
+    padding: 9px 8px;
+  }
+
   /* Daily Table row touch targets */
   table td, table th {
     padding: 9px 6px;
