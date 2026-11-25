@@ -602,6 +602,15 @@ export default function Daily() {
         <div>
           <span className="mut" style={{ fontSize: 13, display: 'block' }}>{DN[dow(d)]}</span>
           <b style={{ fontSize: 18 }}>{sess ? sess.dayName : y.name}</b>
+          {sess && sess.status !== 'rest' && (() => {
+            const totalRepsDay = sess.exercises.reduce((a, e) => a + e.sets.reduce((b, st) => b + (+st.reps || 0), 0), 0)
+            const totalSetsDay = setsDone(sess)
+            return totalSetsDay > 0 ? (
+              <span style={{ fontSize: 12.5, color: 'var(--g-bright)', fontWeight: 600, display: 'block', marginTop: 3 }}>
+                💪 วันนี้ทำไปทั้งหมด {totalSetsDay} เซ็ต · {totalRepsDay.toLocaleString()} ครั้ง
+              </span>
+            ) : null
+          })()}
         </div>
         <Badge status={dstat()} />
       </div>
@@ -843,6 +852,7 @@ export default function Daily() {
             const targetDisplay = e.repRange || `${e.targetReps} ${isTimed ? 'วิ' : 'ครั้ง'}${isPerSide ? '/ข้าง' : ''}`
             const doneSetsCount = e.sets.filter(s => s.done || +s.reps > 0).length
             const targetSetsCount = e.targetSets || e.sets.length || 3
+            const exTotalReps = e.sets.reduce((sum, st) => sum + (+st.reps || 0), 0)
             const progressPercent = Math.min(100, Math.round((doneSetsCount / targetSetsCount) * 100))
 
             return (
@@ -881,7 +891,7 @@ export default function Daily() {
                       <div style={{ width: `${progressPercent}%`, height: '100%', background: doneSetsCount >= targetSetsCount ? 'var(--g)' : 'var(--b)', borderRadius: 99, transition: 'width 0.3s ease' }} />
                     </div>
                     <span style={{ fontSize: 11.5, fontWeight: 700, color: doneSetsCount >= targetSetsCount ? 'var(--g-bright)' : 'var(--b)', whiteSpace: 'nowrap' }}>
-                      {doneSetsCount}/{targetSetsCount} เซ็ต
+                      {doneSetsCount}/{targetSetsCount} เซ็ต{exTotalReps > 0 ? ` · รวม ${exTotalReps} ${isTimed ? 'วิ' : 'ครั้ง'}` : ''}
                     </span>
                   </div>
                 </div>
