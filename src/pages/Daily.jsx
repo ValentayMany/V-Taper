@@ -883,7 +883,7 @@ export default function Daily() {
                   </div>
                 </div>
 
-                {/* Previous Record - Single Line Compact */}
+                {/* Previous Record - Latest Only */}
                 {prevRecord && (
                   <div style={{
                     background: 'rgba(56, 189, 248, 0.08)',
@@ -892,18 +892,9 @@ export default function Daily() {
                     padding: '6px 10px',
                     marginBottom: 10,
                     fontSize: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 6
+                    color: 'var(--b)'
                   }}>
-                    <span style={{ color: 'var(--b)' }}>
-                      📜 ล่าสุด: <b>{prevRecord.sets.map(st => st.reps).join(', ')}</b>
-                    </span>
-                    <span style={{ color: 'var(--g-bright)', fontWeight: 700 }}>
-                      🔥 เป้า: {prevRecord.targetReps}+
-                    </span>
+                    📜 ล่าสุด: <b>{prevRecord.sets.map(st => st.reps).join(', ')}</b> {isTimed ? 'วิ' : 'ครั้ง'}
                   </div>
                 )}
 
