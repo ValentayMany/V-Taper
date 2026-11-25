@@ -75,19 +75,19 @@ export default function RestTimer({ initialSeconds, onFinish, onCancel }) {
   const progressPercent = totalTime > 0 ? Math.min(100, ((totalTime - timeLeft) / totalTime) * 100) : 100
 
   return (
-    <div style={{
+    <div className="rest-timer-floating" style={{
       position: 'fixed',
       bottom: 24,
       left: '50%',
       transform: 'translateX(-50%)',
-      zIndex: 90,
+      zIndex: 120,
       width: '92%',
       maxWidth: 420,
-      background: 'rgba(18, 24, 32, 0.95)',
+      background: 'rgba(18, 24, 32, 0.96)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
-      border: '1px solid rgba(16, 185, 129, 0.4)',
-      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.2)',
+      border: '1px solid rgba(16, 185, 129, 0.45)',
+      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(16, 185, 129, 0.25)',
       borderRadius: 'var(--radius-lg)',
       padding: '14px 18px',
       animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',

@@ -210,6 +210,81 @@ export default function Daily() {
   const yesterdaySess = S.sessions.find(s => s.date === yesterdayDate)
   const missedYesterday = yesterdayPlan && !yesterdayPlan.rest && (!yesterdaySess || yesterdaySess.status !== 'completed')
 
+  const getNextWorkoutRecommendation = (exercise, prevRecord) => {
+    const validSets = exercise.sets.filter(s => +s.reps > 0)
+    const targetReps = exercise.targetReps || 10
+    const targetSets = exercise.targetSets || 3
+
+    if (validSets.length === 0) {
+      if (prevRecord) {
+        return {
+          type: 'target',
+          icon: '🎯',
+          badge: 'เป้าหมายวันนี้',
+          badgeBg: 'rgba(56, 189, 248, 0.15)',
+          badgeColor: '#38bdf8',
+          title: `สถิติเดิม ${prevRecord.bestReps} ครั้ง · ตั้งเป้าท้าทาย ${prevRecord.bestReps + 1}+ ครั้ง`,
+          text: `ครั้งก่อนทำได้ดีที่สุด ${prevRecord.bestReps} ครั้ง (${prevRecord.summary}) วันนี้พยายามรักษาฟอร์มให้นิ่ง คุมจังหวะลง 2-3 วินาที และดันให้ถึง ${prevRecord.bestReps + 1} ครั้ง`,
+          action: 'คำแนะนำ: ค่อยๆ เพิ่มทีละ 1 ครั้งโดยไม่เสียฟอร์ม'
+        }
+      }
+      return {
+        type: 'baseline',
+        icon: '🌱',
+        badge: 'สร้างสถิติเริ่มต้น',
+        badgeBg: 'rgba(16, 185, 129, 0.15)',
+        badgeColor: '#34d399',
+        title: `เป้าหมายตาราง: ${targetSets} เซ็ต × ${targetReps} ครั้ง`,
+        text: `บันทึกครั้งแรกสำหรับท่านี้ โฟกัสฟอร์มการเล่นที่ถูกต้องและสม่ำเสมอ บันทึกจำนวนครั้งที่ทำไหวจริงเพื่อใช้เป็นฐานวิเคราะห์ครั้งถัดไป`,
+        action: 'คำแนะนำ: ยังไม่ต้องรีบยกหนัก เน้นคุมข้อต่อและกล้ามเนื้อเป้าหมาย'
+      }
+    }
+
+    const allMetTarget = validSets.length >= targetSets && validSets.every(s => +s.reps >= targetReps)
+    const bestReps = Math.max(...validSets.map(s => +s.reps))
+    const avgReps = (validSets.reduce((sum, s) => sum + (+s.reps), 0) / validSets.length).toFixed(1)
+
+    // Check if reps dropped compared to previous session
+    if (prevRecord && prevRecord.bestReps > 0) {
+      if (bestReps < prevRecord.bestReps && validSets.length >= 2) {
+        return {
+          type: 'recovery',
+          icon: '🛌',
+          badge: 'ประเมินการฟื้นฟู',
+          badgeBg: 'rgba(245, 158, 11, 0.15)',
+          badgeColor: '#fbbf24',
+          title: `จำนวนครั้งลดลงเล็กน้อย (${bestReps} เทียบกับเดิม ${prevRecord.bestReps} ครั้ง)`,
+          text: `สถิติวันนี้ลดลงจากครั้งก่อน อาจเกิดจากกล้ามเนื้อล้า การนอนหลับ หรือพลังงานสะสม แนะนำให้รักษาฟอร์มให้สะอาด พักผ่อนให้เต็มที่ และไม่ต้องเร่งฝืนเพิ่มน้ำหนัก`,
+          action: 'คำแนะนำ: รักษาระดับเดิม และประเมินการพักผ่อน 7-8 ชม.'
+        }
+      }
+    }
+
+    if (allMetTarget) {
+      return {
+        type: 'overload',
+        icon: '🔥',
+        badge: 'พร้อมก้าวหน้า (Progressive Overload)',
+        badgeBg: 'rgba(16, 185, 129, 0.18)',
+        badgeColor: '#34d399',
+        title: `ผ่านเกณฑ์เป้าหมายครบทุกเซ็ต! (${validSets.length}/${targetSets} เซ็ต ≥ ${targetReps} ครั้ง)`,
+        text: `คุณควบคุมท่าได้ยอดเยี่ยมและทำถึงเป้าหมายครบทุกเซ็ต ในครั้งถัดไปแนะนำเพิ่มความท้าทายด้วยการเพิ่มจำนวนครั้ง +1-2 ครั้ง หรือใช้เทคนิค Pause Tempo (ค้างเกร็งที่จุดสูงสุด 2 วินาที)`,
+        action: 'คำแนะนำครั้งถัดไป: เพิ่มเป้าหมายเป็น ' + (targetReps + 1) + '-' + (targetReps + 2) + ' ครั้ง หรือเพิ่มมุมความยาก'
+      }
+    }
+
+    return {
+      type: 'progressing',
+      icon: '📈',
+      badge: 'สะสมความแข็งแรง',
+      badgeBg: 'rgba(56, 189, 248, 0.15)',
+      badgeColor: '#38bdf8',
+      title: `ทำได้เฉลี่ย ${avgReps} ครั้ง (เป้าหมาย ${targetReps} ครั้ง)`,
+      text: `ยังอยู่ในช่วงพัฒนาความแข็งแรง ให้รักษาน้ำหนักเดิมและพยายามสะสมจำนวนครั้งในแต่ละเซ็ตให้ขยับเข้าใกล้เป้าหมาย ${targetReps} ครั้งทีละเซ็ต`,
+      action: 'คำแนะนำครั้งถัดไป: รักษาน้ำหนักเดิม พยายามดันเซ็ตถัดไปให้ได้อีก +1 ครั้ง'
+    }
+  }
+
   const dstat = () => {
     if (sess) {
       if (sess.status === 'rest') {
@@ -250,7 +325,7 @@ export default function Daily() {
             rest: item.rest,
             done: false,
             note: '',
-            sets: [{ reps: '', kg: '', rest: item.rest, rpe: '' }],
+            sets: [{ reps: '', kg: '', rest: item.rest, rpe: '', done: false }],
           }
         }),
       })
@@ -299,7 +374,7 @@ export default function Daily() {
           rest: item.rest,
           done: false,
           note: '',
-          sets: [{ reps: '', kg: '', rest: item.rest, rpe: '' }],
+          sets: [{ reps: '', kg: '', rest: item.rest, rpe: '', done: false }],
         }
       })
     })
@@ -322,7 +397,27 @@ export default function Daily() {
       const ss = s.sessions.find(x => x.date === d)
       const e = ss.exercises[i]
       const prev = e.sets[e.sets.length - 1]
-      e.sets.push({ reps: '', kg: prev ? prev.kg : '', rest: e.rest, rpe: '' })
+      e.sets.push({ reps: '', kg: prev ? prev.kg : '', rest: e.rest, rpe: '', done: false })
+    }, true)
+  }
+
+  const handleToggleSetDone = (i, j) => {
+    update(s => {
+      const ss = s.sessions.find(x => x.date === d)
+      const ex = ss.exercises[i]
+      const st = ex.sets[j]
+      const newDone = !st.done
+      st.done = newDone
+
+      // Auto-trigger rest timer if completed and has reps
+      if (newDone && +st.reps > 0) {
+        setActiveTimerSeconds(st.rest || ex.rest || 60)
+      }
+
+      // If all sets in this exercise are marked done, mark the exercise done
+      if (ex.sets.length > 0 && ex.sets.every(x => x.done)) {
+        ex.done = true
+      }
     }, true)
   }
 
@@ -368,7 +463,7 @@ export default function Daily() {
         rest: targetEx.rest,
         done: false,
         note: '',
-        sets: [{ reps: '', kg: '', rest: targetEx.rest, rpe: '' }],
+        sets: [{ reps: '', kg: '', rest: targetEx.rest, rpe: '', done: false }],
       })
     }, true)
   }
@@ -390,7 +485,14 @@ export default function Daily() {
     const doIt = () => update(s => {
       const ss = s.sessions.find(x => x.date === d)
       ss.status = 'completed'
-      ss.exercises.forEach(e => { if (e.sets.some(x => +x.reps > 0)) e.done = true })
+      ss.exercises.forEach(e => {
+        if (e.sets.some(x => +x.reps > 0)) {
+          e.done = true
+          e.sets.forEach(st => {
+            if (+st.reps > 0) st.done = true
+          })
+        }
+      })
     })
     if (sess.exercises.some(e => !e.done)) {
       if (confirm('ยังมีท่าที่ไม่ได้กด Complete — ยืนยันว่าฝึกเสร็จแล้ว?')) doIt()
@@ -665,18 +767,40 @@ export default function Daily() {
           {sess.exercises.map((e, i) => {
             const prevRecord = getPrevExerciseRecord(e.exId, e.name)
             const homeGuide = getHomeGuide(e.name)
+            const nextRec = getNextWorkoutRecommendation(e, prevRecord)
+            const isBodyweight = e.name?.toLowerCase().includes('push-up') || e.name?.toLowerCase().includes('plank') || e.name?.toLowerCase().includes('bodyweight')
+            const doneSetsCount = e.sets.filter(s => s.done || +s.reps > 0).length
+            const targetSetsCount = e.targetSets || e.sets.length || 3
+            const progressPercent = Math.min(100, Math.round((doneSetsCount / targetSetsCount) * 100))
 
             return (
               <div key={i} className={`card ${e.done ? 'dn' : ''}`} style={{ borderColor: e.done ? 'var(--g2)' : undefined }}>
                 <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <b style={{ fontSize: 17 }}>{e.name}</b>
                       <span className="bd" style={{ background: 'var(--c2)', fontSize: 11 }}>{e.muscle}</span>
+                      {isBodyweight && (
+                        <span className="bd" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: 11 }}>
+                          บอดี้เวท (BW)
+                        </span>
+                      )}
                     </div>
-                    <span className="mut" style={{ fontSize: 13 }}>
-                      เป้าหมาย {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest} วินาที
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span className="mut" style={{ fontSize: 13 }}>
+                        เป้าหมาย {e.targetSets} เซ็ต × {e.targetReps} ครั้ง · พัก {e.rest} วินาที
+                      </span>
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: doneSetsCount >= targetSetsCount ? 'var(--g-bright)' : 'var(--b)',
+                        background: doneSetsCount >= targetSetsCount ? 'var(--g-bg)' : 'var(--b-bg)',
+                        padding: '2px 8px',
+                        borderRadius: 99
+                      }}>
+                        🎯 ความคืบหน้า: {doneSetsCount}/{targetSetsCount} เซ็ต ({progressPercent}%)
+                      </span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button
@@ -759,15 +883,17 @@ export default function Daily() {
                   </div>
                 )}
 
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', marginBottom: 10 }}>
                   <table>
                     <thead>
                       <tr>
                         <th style={{ width: 44, textAlign: 'center' }}>เซ็ต</th>
-                        <th>ครั้ง</th>
-                        <th>น้ำหนัก (กก.)</th>
-                        <th>พัก (วิ)</th>
-                        <th>เหนื่อย (1-10)</th>
+                        <th style={{ minWidth: 65, textAlign: 'center' }}>เป้าหมาย</th>
+                        <th style={{ minWidth: 80 }}>ทำได้จริง</th>
+                        <th style={{ minWidth: 80 }}>น้ำหนัก (กก.)</th>
+                        <th style={{ minWidth: 70 }}>พัก (วิ)</th>
+                        <th style={{ minWidth: 65 }}>RPE</th>
+                        <th style={{ width: 75, textAlign: 'center' }}>สถานะ</th>
                         <th style={{ width: 36 }}></th>
                       </tr>
                     </thead>
@@ -775,54 +901,145 @@ export default function Daily() {
                       {e.sets.map((set, j) => {
                         const prevSet = prevRecord?.sets[j]
                         return (
-                          <tr key={j}>
-                            <td style={{ fontWeight: 700, color: 'var(--g-bright)', textAlign: 'center' }}>{j + 1}</td>
-                            {['reps', 'kg', 'rest', 'rpe'].map(f => (
-                              <td key={f}>
-                                <input
-                                  className="n" type="number"
-                                  step={f === 'kg' ? '0.5' : '1'}
-                                  value={set[f]}
-                                  placeholder={
-                                    f === 'reps' ? (prevSet ? String(prevSet.reps) : String(e.targetReps)) :
-                                    f === 'kg' ? (prevSet && prevSet.kg ? String(prevSet.kg) : '5') :
-                                    f === 'rest' ? String(e.rest) :
-                                    '1-10'
-                                  }
-                                  onChange={ev => handleSetField(i, j, f, ev.target.value)}
-                                />
-                                {f === 'reps' && (
-                                  <>
-                                    {prevRecord && set.reps && +set.reps > prevRecord.bestReps ? (
-                                      <div style={{
-                                        fontSize: 10,
-                                        color: '#fbbf24',
-                                        fontWeight: 800,
-                                        marginTop: 2,
-                                        textAlign: 'center',
-                                        background: 'rgba(245, 158, 11, 0.18)',
-                                        border: '1px solid rgba(245, 158, 11, 0.4)',
-                                        borderRadius: 4,
-                                        padding: '1px 3px'
-                                      }}>
-                                        🏆 PR! (+{+set.reps - prevRecord.bestReps})
-                                      </div>
-                                    ) : prevSet ? (
-                                      <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
-                                        เดิม: {prevSet.reps}
-                                      </div>
-                                    ) : null}
-                                  </>
-                                )}
-                              </td>
-                            ))}
-                            <td><button className="b s d" onClick={() => deleteSet(i, j)} title="ลบเซ็ตนี้">✕</button></td>
+                          <tr key={j} style={{
+                            background: set.done ? 'rgba(16, 185, 129, 0.08)' : undefined,
+                            transition: 'background 0.2s ease'
+                          }}>
+                            <td style={{ fontWeight: 700, color: 'var(--g-bright)', textAlign: 'center' }}>
+                              {j + 1}
+                            </td>
+                            <td style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--mt)', fontWeight: 600 }}>
+                              {e.targetReps} ครั้ง
+                            </td>
+                            <td>
+                              <input
+                                className="n" type="number"
+                                step="1"
+                                value={set.reps}
+                                placeholder={prevSet ? String(prevSet.reps) : String(e.targetReps)}
+                                onChange={ev => handleSetField(i, j, 'reps', ev.target.value)}
+                              />
+                              {prevRecord && set.reps && +set.reps > prevRecord.bestReps ? (
+                                <div style={{
+                                  fontSize: 10,
+                                  color: '#fbbf24',
+                                  fontWeight: 800,
+                                  marginTop: 2,
+                                  textAlign: 'center',
+                                  background: 'rgba(245, 158, 11, 0.18)',
+                                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                                  borderRadius: 4,
+                                  padding: '1px 3px'
+                                }}>
+                                  🏆 PR! (+{+set.reps - prevRecord.bestReps})
+                                </div>
+                              ) : prevSet ? (
+                                <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
+                                  เดิม: {prevSet.reps}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td>
+                              <input
+                                className="n" type="number"
+                                step="0.5"
+                                value={set.kg}
+                                placeholder={isBodyweight ? 'BW' : (prevSet && prevSet.kg ? String(prevSet.kg) : '5')}
+                                onChange={ev => handleSetField(i, j, 'kg', ev.target.value)}
+                              />
+                              {isBodyweight && !set.kg && (
+                                <div style={{ fontSize: 10, color: 'var(--mt)', marginTop: 2, textAlign: 'center' }}>
+                                  น้ำหนักตัว
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <input
+                                className="n" type="number"
+                                step="5"
+                                value={set.rest}
+                                placeholder={String(e.rest || 60)}
+                                onChange={ev => handleSetField(i, j, 'rest', ev.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                className="n" type="number"
+                                step="1"
+                                min="1"
+                                max="10"
+                                value={set.rpe}
+                                placeholder="1-10"
+                                onChange={ev => handleSetField(i, j, 'rpe', ev.target.value)}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className={`b s ${set.done ? 'p' : ''}`}
+                                style={{
+                                  padding: '5px 8px',
+                                  fontSize: 11.5,
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  minHeight: 28,
+                                  background: set.done ? 'var(--g)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: set.done ? '#032011' : 'var(--mt)',
+                                  border: set.done ? 'none' : '1px solid var(--ln)'
+                                }}
+                                onClick={() => handleToggleSetDone(i, j)}
+                                title={set.done ? 'กดเพื่อยกเลิกสถานะเสร็จ' : 'กดเพื่อบันทึกเซ็ตนี้และเริ่มพัก'}
+                              >
+                                {set.done ? '✓ เสร็จ' : '○ บันทึก'}
+                              </button>
+                            </td>
+                            <td>
+                              <button className="b s d" onClick={() => deleteSet(i, j)} title="ลบเซ็ตนี้">✕</button>
+                            </td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Next Workout Recommendation Card */}
+                {nextRec && (
+                  <div style={{
+                    background: 'rgba(18, 24, 32, 0.65)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 14px',
+                    marginTop: 10,
+                    marginBottom: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 16 }}>{nextRec.icon}</span>
+                        <b style={{ fontSize: 13, color: 'var(--tx)' }}>{nextRec.title}</b>
+                      </div>
+                      <span style={{
+                        background: nextRec.badgeBg,
+                        color: nextRec.badgeColor,
+                        fontWeight: 700,
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        borderRadius: 99
+                      }}>
+                        {nextRec.badge}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.45 }}>
+                      {nextRec.text}
+                    </p>
+                    <div style={{ fontSize: 12, color: 'var(--g-bright)', fontWeight: 600 }}>
+                      💡 {nextRec.action}
+                    </div>
+                  </div>
+                )}
 
               <input
                 style={{ width: '100%', marginTop: 12 }}

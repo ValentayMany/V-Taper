@@ -764,4 +764,13 @@ tr:last-child td {
     color: var(--g-bright);
     background: rgba(16, 185, 129, 0.15);
   }
+
+  /* Rest Timer floating safely above mobile bottom nav */
+  .rest-timer-floating {
+    bottom: calc(75px + env(safe-area-inset-bottom, 12px)) !important;
+    width: calc(100% - 24px) !important;
+    max-width: 420px !important;
+    padding: 12px 14px !important;
+    z-index: 120 !important;
+  }
 }
