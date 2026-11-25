@@ -277,7 +277,7 @@ export default function Daily() {
           badge: prevIncomplete ? 'ทำเซ็ตให้ครบ' : 'เป้าวันนี้',
           badgeBg: prevIncomplete ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
           badgeColor: prevIncomplete ? '#fbbf24' : '#38bdf8',
-          shortText: `ครั้งก่อน: ${prevList.join(' / ')} ${unit}${sideLabel} → เป้าวันนี้: ${nextList.join(' / ')} ${unit}${sideLabel}`
+          shortText: `${nextList.join(' / ')} ${unit}${sideLabel}`
         }
       }
       return {
@@ -884,19 +884,26 @@ export default function Daily() {
                 </div>
 
                 {/* Previous Record - Latest Only */}
-                {prevRecord && (
-                  <div style={{
-                    background: 'rgba(56, 189, 248, 0.08)',
-                    border: '1px solid rgba(56, 189, 248, 0.2)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '6px 10px',
-                    marginBottom: 10,
-                    fontSize: 12,
-                    color: 'var(--b)'
-                  }}>
-                    📜 ล่าสุด: <b>{prevRecord.sets.map(st => st.reps).join(', ')}</b> {isTimed ? 'วิ' : 'ครั้ง'}
-                  </div>
-                )}
+                {prevRecord && (() => {
+                  const repsArr = prevRecord.sets.map(st => st.reps)
+                  const allSame = repsArr.length > 1 && repsArr.every(r => String(r) === String(repsArr[0]))
+                  const latestStr = allSame
+                    ? `${repsArr.length} เซ็ต × ${repsArr[0]}`
+                    : repsArr.join(', ')
+                  return (
+                    <div style={{
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.2)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '6px 10px',
+                      marginBottom: 10,
+                      fontSize: 12,
+                      color: 'var(--b)'
+                    }}>
+                      📜 ล่าสุด: <b>{latestStr}</b> {isTimed ? 'วิ' : 'ครั้ง'}
+                    </div>
+                  )
+                })()}
 
                 {/* Home Workout Guide (collapsed) */}
                 {homeGuide && (
