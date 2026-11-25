@@ -13,9 +13,18 @@ export default function History() {
 
   const sessions = [...S.sessions]
     .sort((a, b) => a.date < b.date ? 1 : -1)
-    .filter(s => (!filterDate || s.date === filterDate) && (!filterMuscle || s.exercises.some(e => e.muscle === filterMuscle)))
+    .filter(s => (!filterDate || s.date === filterDate) && (!filterMuscle || (s.exercises || []).some(e => e.muscle === filterMuscle)))
 
   const clearFilters = () => { setFilterDate(''); setFilterMuscle('') }
+
+  // Summary stats for filtered sessions
+  const workoutSessions = sessions.filter(s => s.status !== 'rest')
+  const totalSetsCount = workoutSessions.reduce((acc, s) =>
+    acc + (s.exercises || []).reduce((ea, e) => ea + (e.sets || []).filter(st => +st.reps > 0).length, 0), 0
+  )
+  const totalRepsCount = workoutSessions.reduce((acc, s) =>
+    acc + (s.exercises || []).reduce((ea, e) => ea + (e.sets || []).reduce((sa, st) => sa + (+st.reps || 0), 0), 0), 0
+  )
 
   const handleExportExcel = () => {
     if (!sessions || sessions.length === 0) {
@@ -147,19 +156,19 @@ export default function History() {
 
       <div className="card" style={{ padding: 14 }}>
         <div className="sp" style={{ flexWrap: 'wrap', gap: 10 }}>
-          <div className="row" style={{ margin: 0, gap: 10 }}>
+          <div className="row" style={{ margin: 0, gap: 8, flex: 1, minWidth: 220 }}>
             <input
               type="date"
               value={filterDate}
               onChange={e => setFilterDate(e.target.value)}
-              style={{ fontWeight: 500 }}
+              style={{ fontWeight: 500, flex: 1, minWidth: 130 }}
             />
-            <select value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
+            <select value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)} style={{ flex: 1, minWidth: 130 }}>
               <option value="">ทุกกลุ่มกล้ามเนื้อ</option>
               {MU.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
             {(filterDate || filterMuscle) && (
-              <button className="b s" onClick={clearFilters}>✕ ล้างตัวกรอง</button>
+              <button className="b s" onClick={clearFilters}>✕ ล้าง</button>
             )}
           </div>
 
@@ -169,10 +178,33 @@ export default function History() {
             title="ดาวน์โหลดประวัติการฝึกเป็นไฟล์ Excel (.csv)"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            📊 บันทึกเป็นไฟล์ Excel
+            📊 ส่งออก Excel
           </button>
         </div>
       </div>
+
+      {/* Compact Summary Strip */}
+      {sessions.length > 0 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+          marginBottom: 16
+        }}>
+          <div className="st" style={{ padding: '12px 10px', textAlign: 'center' }}>
+            <b style={{ fontSize: 22 }}>{workoutSessions.length}</b>
+            <span style={{ fontSize: 12 }}>วันที่ฝึก</span>
+          </div>
+          <div className="st" style={{ padding: '12px 10px', textAlign: 'center' }}>
+            <b style={{ fontSize: 22 }}>{totalSetsCount}</b>
+            <span style={{ fontSize: 12 }}>เซ็ตรวม</span>
+          </div>
+          <div className="st" style={{ padding: '12px 10px', textAlign: 'center' }}>
+            <b style={{ fontSize: 22 }}>{totalRepsCount.toLocaleString()}</b>
+            <span style={{ fontSize: 12 }}>ครั้งรวม</span>
+          </div>
+        </div>
+      )}
 
       {sessions.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '36px 16px' }}>
@@ -181,47 +213,102 @@ export default function History() {
           <p className="mut" style={{ margin: '6px 0 0' }}>เริ่มฝึกซ้อมวันนี้เพื่อเริ่มบันทึกประวัติความคืบหน้าแรกของคุณ</p>
         </div>
       ) : (
-        sessions.map(s => (
-          <div key={s.id} className="card">
-            <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12 }}>
-              <div>
-                <b style={{ fontSize: 16 }}>{s.date}</b>
-                <span className="mut" style={{ marginLeft: 8, fontSize: 13 }}>· {s.dayName}</span>
-              </div>
-              <Badge status={s.status === 'in_progress' ? 'partial' : s.status} />
-            </div>
+        sessions.map(s => {
+          const exercises = (s.exercises || []).filter(e => !filterMuscle || e.muscle === filterMuscle)
+          const sessSets = exercises.reduce((acc, e) => acc + (e.sets || []).filter(x => +x.reps > 0).length, 0)
+          const sessReps = exercises.reduce((acc, e) => acc + (e.sets || []).reduce((sa, x) => sa + (+x.reps || 0), 0), 0)
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {s.exercises
-                .filter(e => !filterMuscle || e.muscle === filterMuscle)
-                .map((e, i) => (
-                  <div key={i} className="ex-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                    <div className="sp" style={{ width: '100%' }}>
-                      <span style={{ fontWeight: 600 }}>{e.name}</span>
-                      <span className="bd" style={{ background: 'var(--c)', fontSize: 11 }}>{e.muscle}</span>
-                    </div>
-                    <div className="mut" style={{ fontSize: 13 }}>
-                      {e.sets.filter(x => +x.reps > 0).map((x, j) =>
-                        `เซ็ต ${j + 1}: ${x.reps} ครั้ง${x.kg ? ' @ ' + x.kg + ' kg' : ''}`
-                      ).join('  ·  ') || '— ยังไม่ได้บันทึกเซ็ต'}
-                    </div>
+          return (
+            <div key={s.id} className="card">
+              <div className="sp" style={{ borderBottom: '1px solid var(--ln)', paddingBottom: 10, marginBottom: 12, gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <b style={{ fontSize: 16 }}>{s.date}</b>
+                    <span className="mut" style={{ fontSize: 13 }}>{s.dayName}</span>
                   </div>
-                ))}
-            </div>
-
-            {s.note && (
-              <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c2)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
-                💬 <span className="mut">{s.note}</span>
+                  {s.status !== 'rest' && sessSets > 0 && (
+                    <div className="mut" style={{ fontSize: 12, marginTop: 2 }}>
+                      รวม {exercises.length} ท่า · {sessSets} เซ็ต · {sessReps} ครั้ง
+                    </div>
+                  )}
+                </div>
+                <Badge status={s.status === 'in_progress' ? 'partial' : s.status} />
               </div>
-            )}
 
-            <div className="row" style={{ marginTop: 14 }}>
-              <button className="b s" onClick={() => navigate(`/daily/${s.date}`)}>
-                ✏️ ดูรายละเอียด / แก้ไข
-              </button>
+              {s.status === 'rest' ? (
+                <div style={{ padding: '8px 0', color: 'var(--b)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>🛌</span> วันพักฟื้นฟูกล้ามเนื้อ
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {exercises.map((e, i) => {
+                    const validSets = (e.sets || []).filter(x => +x.reps > 0)
+                    return (
+                      <div key={i} className="ex-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, padding: '10px 12px' }}>
+                        <div className="sp" style={{ width: '100%', gap: 6 }}>
+                          <span style={{ fontWeight: 600, fontSize: 14.5 }}>{e.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {e.targetSets > 0 && (
+                              <span style={{ fontSize: 11, color: validSets.length >= e.targetSets ? 'var(--g-bright)' : 'var(--mt)', fontWeight: 700 }}>
+                                {validSets.length}/{e.targetSets} เซ็ต
+                              </span>
+                            )}
+                            <span className="bd" style={{ background: 'var(--c)', fontSize: 11 }}>{e.muscle}</span>
+                          </div>
+                        </div>
+
+                        {validSets.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {validSets.map((x, j) => {
+                              const hasKg = x.kg !== '' && x.kg != null && +x.kg > 0
+                              return (
+                                <span
+                                  key={j}
+                                  style={{
+                                    fontSize: 12,
+                                    background: 'var(--c)',
+                                    border: '1px solid var(--ln)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    padding: '3px 8px',
+                                    color: 'var(--tx)',
+                                    fontVariantNumeric: 'tabular-nums'
+                                  }}
+                                >
+                                  <b style={{ color: 'var(--g-bright)' }}>S{j + 1}:</b> {x.reps} ครั้ง{hasKg ? ` × ${x.kg}kg` : ' (BW)'}
+                                  {x.rpe ? <span className="mut"> · RPE {x.rpe}</span> : null}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="mut" style={{ fontSize: 12.5 }}>— ยังไม่ได้บันทึกเซ็ต</div>
+                        )}
+
+                        {e.note && (
+                          <div className="mut" style={{ fontSize: 12 }}>
+                            📝 {e.note}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {s.note && (
+                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c2)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
+                  💬 <span className="mut">{s.note}</span>
+                </div>
+              )}
+
+              <div className="row" style={{ marginTop: 14 }}>
+                <button className="b s" onClick={() => navigate(`/daily/${s.date}`)}>
+                  ✏️ ดูรายละเอียด / แก้ไข
+                </button>
+              </div>
             </div>
-          </div>
-        ))
+          )
+        })
       )}
     </>
   )
