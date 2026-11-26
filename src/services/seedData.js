@@ -153,11 +153,13 @@ export function migrateStore(store) {
   let changed = false
   ensureProgramExercises(store)
 
-  const isOldV1Plan = store.plan?.days?.[0]?.name === 'Upper A' && store.plan?.days?.[1]?.name === 'Lower A'
-  const planMigrated = typeof localStorage !== 'undefined' && localStorage.getItem('vtaper.planV2') === '1'
-  if ((!planMigrated && (store.planVersion || 1) < 2) || isOldV1Plan) {
+  const forceLean4 = typeof localStorage !== 'undefined' && localStorage.getItem('vtaper.forceLean4.v1') === '1'
+  if (!forceLean4) {
     applyLeanVTaperProgram(store)
-    if (typeof localStorage !== 'undefined') localStorage.setItem('vtaper.planV2', '1')
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('vtaper.planV2', '1')
+      localStorage.setItem('vtaper.forceLean4.v1', '1')
+    }
     changed = true
   } else {
     store.planVersion = 2

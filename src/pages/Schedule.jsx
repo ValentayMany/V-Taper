@@ -169,7 +169,7 @@ export default function Schedule() {
   }
   const activeProgram = detectActiveProgram()
   const activeLabel = activeProgram === 'lean4'
-    ? '✨ โปรแกรม Lean V-Taper 4 วัน (ใหม่)'
+    ? '✨ โปรแกรม Lean V-Taper 4 วัน (หลัก)'
     : activeProgram === 'focus'
     ? '🔥 ตารางเน้น ไหล่ - อก - แขน'
     : '🛠️ กำหนดเอง (Custom)'
