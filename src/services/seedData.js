@@ -153,8 +153,12 @@ export function migrateStore(store) {
   let changed = false
   ensureProgramExercises(store)
 
+  const monName = store.plan?.days?.[0]?.name || ''
+  const tueName = store.plan?.days?.[1]?.name || ''
+  const isLegacyDefaultPlan = monName === 'Upper A' && tueName === 'Lower A'
+
   const planMigrated = typeof localStorage !== 'undefined' && localStorage.getItem('vtaper.planV2') === '1'
-  if (!planMigrated && (store.planVersion || 1) < 2) {
+  if ((!planMigrated || isLegacyDefaultPlan) && (store.planVersion || 1) < 2) {
     applyLeanVTaperProgram(store)
     if (typeof localStorage !== 'undefined') localStorage.setItem('vtaper.planV2', '1')
     changed = true
